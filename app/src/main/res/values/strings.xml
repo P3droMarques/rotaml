@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RotaML</string>
+    <string name="service_name">Leitor Envios Extra</string>
+    <string name="accessibility_description">Captura endereços da tela do Mercado Envios Extra para otimização de rota.</string>
+</resources>

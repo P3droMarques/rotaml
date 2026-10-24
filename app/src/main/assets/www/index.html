@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>RotaML UI</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+        .tabs { display: flex; background: #3483FA; color: white; position: sticky; top: 0; z-index: 1000; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab.active { border-bottom: 3px solid #FFE600; font-weight: bold; }
+        .content { display: none; padding: 15px; }
+        .content.active { display: block; }
+        
+        #map { height: 70vh; width: 100%; border-radius: 8px; }
+        
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-biper { background: #3483FA; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; border-radius: 10px; margin-top: 10px; }
+        
+        .zone { padding: 10px; margin-top: 10px; border-radius: 5px; color: white; font-weight: bold; }
+        .frente { background: #4CAF50; }
+        .meio { background: #FFC107; color: black; }
+        .porta-malas { background: #F44336; }
+        
+        .stop-item { border-left: 5px solid #3483FA; padding-left: 10px; margin-bottom: 10px; }
+        .stop-num { font-weight: bold; color: #3483FA; }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <div class="tab active" onclick="openTab('tab-biper')">BIPER</div>
+    <div class="tab" onclick="openTab('tab-carro')">CARRO</div>
+    <div class="tab" onclick="openTab('tab-mapa')">MAPA</div>
+</div>
+
+<div id="tab-biper" class="content active">
+    <div class="card">
+        <h2>Conferência</h2>
+        <div id="count">Pacotes: 0 / 0</div>
+        <button class="btn-biper" onclick="Android.bipar()">📸 BIPAR PACOTE</button>
+        <div id="last-bipe" style="margin-top: 15px; font-size: 18px; font-weight: bold;"></div>
+    </div>
+</div>
+
+<div id="tab-carro" class="content">
+    <div class="zone frente">🟢 FRENTE (ZONA 1)</div>
+    <div id="list-frente"></div>
+    <div class="zone meio">🟡 MEIO (ZONA 2)</div>
+    <div id="list-meio"></div>
+    <div class="zone porta-malas">🔴 PORTA-MALAS (ZONA 3)</div>
+    <div id="list-mala"></div>
+</div>
+
+<div id="tab-mapa" class="content">
+    <div id="map"></div>
+    <div id="route-info" class="card" style="margin-top: 10px;">
+        Selecione "Gerar Rota" no topo.
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map = L.map('map').setView([-23.5505, -46.6333], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let markers = [];
+    let rotaAtual = [];
+    let bipados = new Set();
+
+    function openTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if (id === 'tab-mapa') setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    window.carregarRota = function(paradas) {
+        rotaAtual = paradas;
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        
+        let latlngs = [];
+        let htmlFrente = '', htmlMeio = '', htmlMala = '';
+
+        paradas.forEach((p, i) => {
+            let pos = [p.lat, p.lng];
+            latlngs.push(pos);
+            let m = L.marker(pos).addTo(map).bindPopup(`<b>#${i+1}</b><br>${p.endereco}<br><button onclick="window.open('geo:${p.lat},${p.lng}')">Navegar</button>`);
+            markers.push(m);
+            
+            let itemHtml = `<div class="card stop-item"><span class="stop-num">#${i+1}</span> ${p.endereco}</div>`;
+            if (i < paradas.length / 3) htmlFrente += itemHtml;
+            else if (i < (2 * paradas.length) / 3) htmlMeio += itemHtml;
+            else htmlMala += itemHtml;
+        });
+
+        document.getElementById('list-frente').innerHTML = htmlFrente;
+        document.getElementById('list-meio').innerHTML = htmlMeio;
+        document.getElementById('list-mala').innerHTML = htmlMala;
+        document.getElementById('count').innerText = `Pacotes: 0 / ${paradas.length}`;
+
+        if (latlngs.length > 0) map.fitBounds(L.latLngBounds(latlngs));
+        document.getElementById('route-info').innerHTML = `<b>Distância estimada:</b> Calculando...<br><b>Paradas:</b> ${paradas.length}`;
+    };
+
+    window.confirmarBipe = function(code) {
+        if (bipados.has(code)) {
+            Android.speak("Atenção: Pacote duplicado!");
+            alert("PACOTE DUPLICADO!");
+            return;
+        }
+        bipados.add(code);
+        document.getElementById('count').innerText = `Pacotes: ${bipados.size} / ${rotaAtual.length}`;
+        document.getElementById('last-bipe').innerText = "Último: " + code;
+        
+        // Lógica simples de zona baseada na ordem da rota
+        let idx = rotaAtual.findIndex(p => code.includes(p.id) || p.id.includes(code));
+        if (idx !== -1) {
+            let zona = "Porta-malas";
+            if (idx < rotaAtual.length / 3) zona = "Frente";
+            else if (idx < (2 * rotaAtual.length) / 3) zona = "Meio";
+            Android.speak(`Parada ${idx + 1}, ${zona}`);
+        }
+    };
+</script>
+
+</body>
+</html>
