@@ -28,7 +28,14 @@ class LeitorEnviosService : AccessibilityService() {
 
         node.text?.let {
             val s = it.toString().trim()
-            if (s.length > 5) { // Evita lixo muito curto
+            if (s.length >= 2) { // Captura IDs curtos, números de paradas e etiquetas
+                textosCapturados.add(s)
+            }
+        }
+
+        node.contentDescription?.let {
+            val s = it.toString().trim()
+            if (s.length >= 2) {
                 textosCapturados.add(s)
             }
         }
