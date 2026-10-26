@@ -540,16 +540,17 @@
             border-radius: var(--radius-md);
             overflow: hidden;
             border: 1px solid var(--border);
+            background: #111827;
         }
 
-        #map { height: 100%; width: 100%; }
+        #map { height: 100%; width: 100%; background: #111827; }
 
         .map-stats-overlay {
             position: absolute;
             top: 10px;
             left: 10px;
             right: 10px;
-            background: rgba(22, 27, 34, 0.92);
+            background: rgba(22, 27, 34, 0.94);
             backdrop-filter: blur(8px);
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
@@ -558,7 +559,27 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* Floating Next Stop Banner */
+        .next-stop-banner {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            right: 10px;
+            background: rgba(33, 38, 45, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--ml-yellow);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
         }
 
         .map-controls-overlay {
@@ -567,16 +588,18 @@
             left: 10px;
             right: 10px;
             display: flex;
-            gap: 8px;
+            gap: 6px;
             z-index: 1000;
+            flex-wrap: wrap;
         }
 
         .btn-map-control {
             flex: 1;
+            min-width: 80px;
             background: #21262d;
             color: #fff;
             border: 1px solid var(--border);
-            padding: 10px;
+            padding: 9px 6px;
             border-radius: var(--radius-sm);
             font-size: 11px;
             font-weight: 700;
@@ -586,11 +609,18 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
+            white-space: nowrap;
         }
         .btn-map-control.primary {
             background: var(--ml-yellow);
             color: #000;
             border-color: var(--ml-yellow-dark);
+        }
+        .btn-map-control.follow-active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.7);
         }
 
         .test-btn {
@@ -658,6 +688,41 @@
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
         }
 
+        /* Real-Time GPS Car Marker */
+        .car-gps-marker {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .car-gps-pulse {
+            position: absolute;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(47, 129, 247, 0.4);
+            animation: carGpsPulse 2s infinite ease-out;
+        }
+        @keyframes carGpsPulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+        .car-gps-bubble {
+            width: 32px;
+            height: 32px;
+            background: #2563eb;
+            border: 2.5px solid #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+
         /* Modal Dialog */
         .modal-overlay {
             position: fixed;
@@ -714,19 +779,19 @@
     <!-- Main Content Container -->
     <div class="content-area">
 
-        <!-- TAB 1: HUB DE ROTAS (BANCO DE DADOS FIREBASE) -->
+        <!-- TAB 1: HUB DE ROTAS (BANCO DE DADOS FIREBASE & OFFLINE) -->
         <div id="tab-rotas" class="tab-content active">
             <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1c2214, #161b22);">
                 <div class="card-header" style="margin-bottom: 4px;">
                     <span class="card-title" style="color: var(--ml-yellow); font-size: 15px;">
-                        📋 Banco de Dados Firebase (Rotas na Nuvem)
+                        📋 Banco de Dados Firebase (Nuvem & Offline)
                     </span>
                     <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window.Android && window.Android.abrirConfiguracoes ? window.Android.abrirConfiguracoes() : alert('Abra as configurações no topo ⚙️')">
                         ⚙️ Config
                     </button>
                 </div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">
-                    Todas as rotas criadas são <b>salvas automaticamente no banco de dados</b>. Acesse, acompanhe e finalize de qualquer celular conectado!
+                    Todas as rotas são <b>salvas automaticamente no banco de dados e na memória do aparelho</b> para funcionar com ou sem internet em qualquer celular!
                 </p>
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-big-scan" style="padding: 12px; font-size: 14px; flex: 1.2;" onclick="abrirModalCriarRota()">
@@ -742,10 +807,11 @@
             <div id="banner-rota-ativa" style="display: none;" class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="font-size: 11px; text-transform: uppercase; color: var(--ml-yellow); font-weight: 800;">
-                            🚀 Rota Ativa no Momento
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--ml-yellow); font-weight: 800; display: flex; align-items: center; gap: 6px;">
+                            <span>🚀 Rota Ativa no Momento</span>
+                            <span id="badge-offline-rota" style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 6px; border-radius: 4px; font-size: 9px;">💾 Salva Offline</span>
                         </div>
-                        <div id="banner-rota-ativa-nome" style="font-size: 14px; font-weight: 700; color: #fff;">
+                        <div id="banner-rota-ativa-nome" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">
                             Nome da Rota
                         </div>
                     </div>
@@ -801,6 +867,9 @@
                     <button class="btn-action-small" onclick="switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2])" style="background: rgba(47, 129, 247, 0.2); color: #58a6ff; border-color: #58a6ff; font-weight: 700;">
                         🗺️ Ver no Mapa
                     </button>
+                    <button class="btn-action-small" onclick="baixarRotaOfflineManual()" style="background: rgba(255, 230, 0, 0.15); color: var(--ml-yellow); border-color: var(--ml-yellow);">
+                        💾 Baixar Offline
+                    </button>
                     <button class="btn-action-small" onclick="switchTab('tab-rotas', document.querySelectorAll('.tab-btn')[0])" style="background: var(--surface-card); color: var(--text-muted);">
                         📋 Trocar Rota
                     </button>
@@ -815,12 +884,12 @@
             </div>
         </div>
 
-        <!-- TAB 3: MAPA INTERATIVO -->
+        <!-- TAB 3: MAPA INTERATIVO (COM RASTREAMENTO DO CARRO E RUAS REAIS) -->
         <div id="tab-mapa" class="tab-content">
             <div id="map-container">
                 <div id="map"></div>
                 
-                <!-- Floating Info Overlay -->
+                <!-- Floating Info Overlay Top -->
                 <div class="map-stats-overlay" id="map-stats-box">
                     <div>
                         <b id="map-route-title" style="color: var(--ml-yellow); font-size: 13px;">Carregue uma rota</b>
@@ -830,22 +899,48 @@
                         <span id="map-route-entregas-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #10b981;">
                             0/0 Entregues
                         </span>
-                        <span id="map-route-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: var(--surface-card);">
-                            0 km
+                        <span id="map-car-speed-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(37, 99, 235, 0.25); color: #60a5fa;">
+                            🚗 GPS
                         </span>
                     </div>
                 </div>
 
-                <!-- Floating Controls Overlay -->
+                <!-- Floating Next Stop Banner -->
+                <div id="next-stop-floating-card" class="next-stop-banner" style="display: none;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: var(--ml-yellow); text-transform: uppercase;">
+                            👉 PRÓXIMA PARADA (<span id="next-stop-num">#1</span>)
+                        </div>
+                        <div id="next-stop-address" style="font-size: 13px; font-weight: 700; color: #fff; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Rua...
+                        </div>
+                        <div id="next-stop-dist" style="font-size: 11px; color: #9ca3af;">
+                            Calculando distância...
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 4px;">
+                        <button id="btn-next-stop-waze" class="btn-action-small" style="padding: 6px 8px; background: #33ccff; color: #000; font-weight: 800; font-size: 11px; border: none;">
+                            🚗 Waze
+                        </button>
+                        <button id="btn-next-stop-finalizar" class="btn-action-small" style="padding: 6px 8px; background: #10b981; color: #fff; font-weight: 800; font-size: 11px; border: none;">
+                            ✅
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Controls Overlay Bottom -->
                 <div class="map-controls-overlay">
+                    <button class="btn-map-control" id="btn-seguir-carro" onclick="toggleSeguirCarro()">
+                        🎯 Seguir Carro
+                    </button>
                     <button class="btn-map-control primary" onclick="executarOtimizacaoRota()">
-                        ⚡ OTIMIZAR
+                        ⚡ Otimizar
                     </button>
                     <button class="btn-map-control" onclick="alternarVisaoRota()">
-                        🔄 BRUTA / OTIMIZADA
+                        🔄 Ruas / Bruta
                     </button>
                     <button class="btn-map-control" id="btn-map-finalizar-rota" onclick="alternarFinalizarRotaAtiva()" style="background: #10b981; color: #fff; border-color: #059669;">
-                        🏁 FINALIZAR ROTA
+                        🏁 Finalizar
                     </button>
                 </div>
             </div>
@@ -978,7 +1073,7 @@
                 <button onclick="fecharModalCriarRota()" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-                Escolha como deseja criar a rota. Ela será automaticamente gravada no Firebase e ficará disponível para todos os celulares:
+                Escolha como deseja criar a rota. Ela será gravada no Firebase e salva offline no dispositivo:
             </p>
 
             <button class="test-btn highlight" onclick="fecharModalCriarRota(); acionarOcrGaleria();" style="border-color: #58a6ff;">
@@ -1088,10 +1183,38 @@
                 },
                 salvarRotaAuto: function(id, json) {
                     todasRotasNuvem[id] = JSON.parse(json);
-                    console.log("[Firebase AutoSave]", id);
+                    localStorage.setItem('offline_rota_' + id, json);
+                    localStorage.setItem('offline_rota_ativa', json);
+                },
+                salvarRotaOffline: function(id, json) {
+                    localStorage.setItem('offline_rota_' + id, json);
+                    localStorage.setItem('offline_rota_ativa', json);
+                },
+                obterRotaOffline: function(id) {
+                    return localStorage.getItem('offline_rota_' + id) || "";
+                },
+                obterUltimaRotaAtivaOffline: function() {
+                    return localStorage.getItem('offline_rota_ativa') || "";
+                },
+                buscarGeometriaRuasOSRM: function(coordsList) {
+                    let url = `https://router.project-osrm.org/route/v1/driving/${coordsList}?overview=full&geometries=geojson`;
+                    fetch(url).then(r => r.json()).then(data => {
+                        let coords = data.routes && data.routes[0] ? data.routes[0].geometry.coordinates : [];
+                        window.receberGeometriaRuasOSRM(coords, true);
+                    }).catch(() => {
+                        window.receberGeometriaRuasOSRM([], false);
+                    });
+                },
+                solicitarRastreamentoGPS: function() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.watchPosition((pos) => {
+                            window.atualizarPosicaoCarro(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0, (pos.coords.speed || 0) * 3.6, pos.coords.accuracy);
+                        });
+                    }
                 },
                 excluirRotaNuvem: function(id) {
                     delete todasRotasNuvem[id];
+                    localStorage.removeItem('offline_rota_' + id);
                     window.receberListaRotasFirebase(todasRotasNuvem, true, "Excluído");
                 },
                 atualizarStatusParadaNuvem: function(id, index, finalizada, hora) {
@@ -1123,10 +1246,21 @@
         let isRotaOtimizada = false;
         let pacotesBipados = new Set();
         let historicoBipes = [];
+
+        // Map and Route Geometry State
         let map = null;
         let markers = [];
+        let polylineRuas = null;
+        let polylineBorder = null;
         let polylineBruta = null;
-        let polylineOtimizada = null;
+        let rotaGeometriaRuasCache = null; // Cache das curvas das ruas
+
+        // GPS Car Tracker State
+        let carMarker = null;
+        let carLatLng = null;
+        let carHeading = 0;
+        let carSpeedKmh = 0;
+        let isSeguirCarroAtivo = false;
 
         // Init Map
         function initMap() {
@@ -1136,12 +1270,161 @@
                     console.warn("Leaflet não disponível offline");
                     return;
                 }
-                map = L.map('map').setView([-22.8850, -47.0580], 13); // Região de Campinas
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                map = L.map('map', {
+                    zoomControl: true,
+                    attributionControl: false
+                }).setView([-22.8850, -47.0580], 14); // Centro Campinas
+
+                // Camada OpenStreetMap com fallback offline
+                let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
                     attribution: '© OpenStreetMap'
-                }).addTo(map);
+                });
+                tileLayer.on('tileerror', function() {
+                    // Se estiver sem internet, o mapa mantém canvas escuro e as ruas continuam visíveis!
+                    console.log("[Map] Modo offline: tile não carregado da rede.");
+                });
+                tileLayer.addTo(map);
+
+                // Se o usuário arrastar o mapa manualmente, desativa o seguir carro automático para não atrapalhar
+                map.on('dragstart', function() {
+                    if (isSeguirCarroAtivo) {
+                        isSeguirCarroAtivo = false;
+                        atualizarBotaoSeguirCarro();
+                    }
+                });
+
             } catch (e) {
                 console.error("Leaflet init error:", e);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // RASTREAMENTO GPS EM TEMPO REAL COM CARRINHO NO MAPA
+        // -------------------------------------------------------------
+        function criarIconeCarro(bearing) {
+            let rot = bearing ? `transform: rotate(${Math.round(bearing)}deg);` : '';
+            return L.divIcon({
+                className: 'custom-car-container',
+                html: `
+                    <div class="car-gps-marker">
+                        <div class="car-gps-pulse"></div>
+                        <div class="car-gps-bubble" style="${rot}">
+                            🚗
+                        </div>
+                    </div>
+                `,
+                iconSize: [38, 38],
+                iconAnchor: [19, 19],
+                popupAnchor: [0, -19]
+            });
+        }
+
+        window.atualizarPosicaoCarro = function(lat, lng, bearing, speedKmh, accuracy) {
+            if (!lat || !lng) return;
+            carLatLng = [lat, lng];
+            carHeading = bearing || 0;
+            carSpeedKmh = Math.max(0, Math.round(speedKmh || 0));
+
+            // Atualiza HUD no mapa
+            const speedEl = document.getElementById('map-car-speed-badge');
+            if (speedEl) {
+                let speedText = carSpeedKmh > 3 ? `${carSpeedKmh} km/h` : 'Parado';
+                speedEl.innerText = `🚗 ${speedText}`;
+                speedEl.style.color = carSpeedKmh > 0 ? '#10b981' : '#60a5fa';
+            }
+
+            if (!map) return;
+
+            if (!carMarker) {
+                carMarker = L.marker([lat, lng], {
+                    icon: criarIconeCarro(bearing),
+                    zIndexOffset: 1000
+                }).addTo(map);
+                carMarker.bindPopup(`<b>🚗 Seu Veículo</b><br>Velocidade: ${carSpeedKmh} km/h<br>Precisão GPS: ±${Math.round(accuracy || 0)}m`);
+            } else {
+                carMarker.setLatLng([lat, lng]);
+                carMarker.setIcon(criarIconeCarro(bearing));
+            }
+
+            // Modo Seguir Carro (Navegação)
+            if (isSeguirCarroAtivo && map) {
+                map.panTo([lat, lng], { animate: true, duration: 0.8 });
+            }
+
+            // Atualiza card de Próxima Parada
+            atualizarProximaParadaDistancia();
+        };
+
+        function toggleSeguirCarro() {
+            isSeguirCarroAtivo = !isSeguirCarroAtivo;
+            atualizarBotaoSeguirCarro();
+            if (isSeguirCarroAtivo) {
+                if (carLatLng && map) {
+                    map.setView(carLatLng, Math.max(map.getZoom(), 16), { animate: true });
+                    showToast("🎯 Acompanhando seu carro em tempo real");
+                } else {
+                    showToast("Aguardando sinal do GPS para centralizar...");
+                }
+            } else {
+                showToast("Modo livre do mapa ativado");
+            }
+        }
+
+        function atualizarBotaoSeguirCarro() {
+            const btn = document.getElementById('btn-seguir-carro');
+            if (btn) {
+                if (isSeguirCarroAtivo) {
+                    btn.classList.add('follow-active');
+                    btn.innerHTML = '🎯 Seguindo 🚗';
+                } else {
+                    btn.classList.remove('follow-active');
+                    btn.innerHTML = '🎯 Seguir Carro';
+                }
+            }
+        }
+
+        function atualizarProximaParadaDistancia() {
+            const card = document.getElementById('next-stop-floating-card');
+            if (!card) return;
+
+            let proxIdx = -1;
+            let proxParada = null;
+            for (let i = 0; i < rotaAtual.length; i++) {
+                if (!rotaAtual[i].finalizada) {
+                    proxIdx = i;
+                    proxParada = rotaAtual[i];
+                    break;
+                }
+            }
+
+            if (!proxParada || !proxParada.lat) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'flex';
+            document.getElementById('next-stop-num').innerText = `#${proxIdx + 1}`;
+            document.getElementById('next-stop-address').innerText = proxParada.endereco || proxParada.destinatario || 'Endereço';
+
+            let distStr = 'Próxima entrega';
+            if (carLatLng) {
+                let distKm = calcDistanceKm(carLatLng[0], carLatLng[1], proxParada.lat, proxParada.lng);
+                if (distKm < 1.0) {
+                    distStr = `A cerca de ${Math.round(distKm * 1000)} metros daqui`;
+                } else {
+                    distStr = `A cerca de ${distKm.toFixed(1)} km daqui`;
+                }
+            }
+            document.getElementById('next-stop-dist').innerText = distStr;
+
+            const btnWaze = document.getElementById('btn-next-stop-waze');
+            if (btnWaze) {
+                btnWaze.onclick = () => navegarWaze(proxIdx);
+            }
+            const btnFin = document.getElementById('btn-next-stop-finalizar');
+            if (btnFin) {
+                btnFin.onclick = () => alternarFinalizarParada(proxIdx);
             }
         }
 
@@ -1162,6 +1445,9 @@
                     if (map) {
                         map.invalidateSize();
                         renderizarMapa();
+                        if (isSeguirCarroAtivo && carLatLng) {
+                            map.setView(carLatLng, Math.max(map.getZoom(), 16));
+                        }
                     }
                 }, 200);
             }
@@ -1213,7 +1499,7 @@
         // MATEMÁTICA DE ROTA: HAVERSINE & ALGORITMO 2-OPT TSP
         // -------------------------------------------------------------
         function calcDistanceKm(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Raio da Terra em km
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1309,6 +1595,8 @@
             let perc = distAntes > 0 ? (((distAntes - distDepois) / distAntes) * 100).toFixed(0) : 0;
 
             isRotaOtimizada = true;
+            rotaGeometriaRuasCache = null; // Força recálculo do traçado das ruas reais
+
             atualizarEstatisticas();
             renderizarParadas();
             renderizarZonasCarro();
@@ -1321,6 +1609,7 @@
             }
             showToast(`🚀 Rota Otimizada! Economia de ${economia} km (${perc}%)!`);
             salvarEstadoRotaAtivaNoBanco();
+            baixarGeometriaRuasReais();
         }
 
         function alternarVisaoRota() {
@@ -1332,17 +1621,91 @@
             if (isRotaOtimizada) {
                 rotaAtual = rotaBrutaOriginal.map(p => ({ ...p }));
                 isRotaOtimizada = false;
+                rotaGeometriaRuasCache = null;
                 showToast("Mostrando Rota Bruta (como lida da tela)");
             } else {
                 rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
                 isRotaOtimizada = true;
-                showToast("Mostrando Rota Otimizada (menor distância)");
+                rotaGeometriaRuasCache = null;
+                showToast("Mostrando Rota Otimizada respeitando ruas");
             }
 
             atualizarEstatisticas();
             renderizarParadas();
             renderizarZonasCarro();
             renderizarMapa();
+            baixarGeometriaRuasReais();
+        }
+
+        // -------------------------------------------------------------
+        // ROTEAMENTO OSRM: TRAÇADO REAL SEGUINDO RUAS E ESQUINAS
+        // -------------------------------------------------------------
+        function baixarGeometriaRuasReais() {
+            let pontosComCoords = rotaAtual.filter(p => p.lat && p.lng);
+            if (pontosComCoords.length < 2) return;
+
+            let coordsStr = pontosComCoords.map(p => `${p.lng},${p.lat}`).join(';');
+            
+            if (window.Android && window.Android.buscarGeometriaRuasOSRM) {
+                window.Android.buscarGeometriaRuasOSRM(coordsStr);
+            } else {
+                // Fallback browser fetch
+                let url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+                fetch(url).then(r => r.json()).then(data => {
+                    let coords = data.routes && data.routes[0] ? data.routes[0].geometry.coordinates : [];
+                    window.receberGeometriaRuasOSRM(coords, true);
+                }).catch(() => {
+                    console.log("[OSRM] Fallback offline ativo.");
+                });
+            }
+        }
+
+        window.receberGeometriaRuasOSRM = function(coordsGeoJson, success) {
+            if (success && Array.isArray(coordsGeoJson) && coordsGeoJson.length > 0) {
+                // Inverte [lng, lat] para Leaflet [lat, lng]
+                rotaGeometriaRuasCache = coordsGeoJson.map(c => [c[1], c[0]]);
+                renderizarTrilhasRuas(rotaGeometriaRuasCache);
+                // Salva offline com a rota ativa
+                salvarEstadoRotaAtivaNoBanco();
+            } else {
+                // Fallback se OSRM offline: liga os pontos
+                let fallback = rotaAtual.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]);
+                renderizarTrilhasRuas(fallback);
+            }
+        };
+
+        function renderizarTrilhasRuas(latlngs) {
+            if (!map || !latlngs || latlngs.length < 2) return;
+
+            if (polylineRuas) map.removeLayer(polylineRuas);
+            if (polylineBorder) map.removeLayer(polylineBorder);
+            if (polylineBruta) map.removeLayer(polylineBruta);
+
+            // 1. Linha de fundo escuro para destacar sobre as ruas do mapa
+            polylineBorder = L.polyline(latlngs, {
+                color: '#0d1117',
+                weight: 9,
+                opacity: 0.8,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            // 2. Linha amarela viva seguindo a geometria exata das ruas
+            polylineRuas = L.polyline(latlngs, {
+                color: '#FFE600',
+                weight: 5.5,
+                opacity: 0.95,
+                smoothFactor: 1,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            let distKm = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
+            document.getElementById('map-route-title').innerText = `⚡ Rota nas Ruas (${rotaAtual.length} paradas)`;
+            document.getElementById('map-route-title').style.color = 'var(--ml-yellow)';
+            document.getElementById('map-route-sub').innerText = `Traçado exato pelas ruas e esquinas`;
+            document.getElementById('map-route-badge').innerText = `${distKm} km`;
+            document.getElementById('map-route-badge').style.color = 'var(--success-glow)';
         }
 
         // -------------------------------------------------------------
@@ -1594,6 +1957,8 @@
             if (mapEntregasBadge) {
                 mapEntregasBadge.innerText = `${finalizadas}/${total} Entregues`;
             }
+
+            atualizarProximaParadaDistancia();
         }
 
         // -------------------------------------------------------------
@@ -1873,15 +2238,13 @@
             });
         }
 
-        // Render Map with Route and Popups containing Finalizar Parada
+        // Render Map with Route following streets and Popups containing Finalizar Parada
         function renderizarMapa() {
             initMap();
             if (!map) return;
 
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            if (polylineBruta) map.removeLayer(polylineBruta);
-            if (polylineOtimizada) map.removeLayer(polylineOtimizada);
 
             let latlngs = [];
             let total = rotaAtual.length;
@@ -1926,44 +2289,24 @@
                 }
             });
 
-            if (latlngs.length > 0) {
-                let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-                let tempoEstimadoHoras = (distTotal / 18).toFixed(1);
+            // Se já tem traçado real das ruas em cache, desenha imediatamente!
+            if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
+                renderizarTrilhasRuas(rotaGeometriaRuasCache);
+            } else if (latlngs.length > 0) {
+                // Desenha linha inicial e busca ruas reais no OSRM
+                renderizarTrilhasRuas(latlngs);
+                baixarGeometriaRuasReais();
+            }
 
-                if (isRotaOtimizada) {
-                    polylineOtimizada = L.polyline(latlngs, {
-                        color: '#FFE600',
-                        weight: 4,
-                        opacity: 0.9,
-                        smoothFactor: 1
-                    }).addTo(map);
-
-                    document.getElementById('map-route-title').innerText = `⚡ Rota Otimizada (${rotaAtual.length} paradas)`;
-                    document.getElementById('map-route-title').style.color = 'var(--ml-yellow)';
-                    document.getElementById('map-route-sub').innerText = `Sequência contínua sem cruzamentos | ~${tempoEstimadoHoras}h`;
-                    document.getElementById('map-route-badge').innerText = `${distTotal} km`;
-                    document.getElementById('map-route-badge').style.color = 'var(--success-glow)';
-                } else {
-                    polylineBruta = L.polyline(latlngs, {
-                        color: '#da3633',
-                        weight: 2.5,
-                        dashArray: '6, 6',
-                        opacity: 0.8
-                    }).addTo(map);
-
-                    document.getElementById('map-route-title').innerText = `⚠️ Rota Bruta (${rotaAtual.length} paradas)`;
-                    document.getElementById('map-route-title').style.color = '#da3633';
-                    document.getElementById('map-route-sub').innerText = `Ordem desordenada com cruzamentos`;
-                    document.getElementById('map-route-badge').innerText = `${distTotal} km`;
-                    document.getElementById('map-route-badge').style.color = '#da3633';
-                }
-
+            if (latlngs.length > 0 && !isSeguirCarroAtivo) {
                 map.fitBounds(L.latLngBounds(latlngs), { padding: [35, 35] });
             }
+
+            atualizarProximaParadaDistancia();
         }
 
         // -------------------------------------------------------------
-        // HUB DE ROTAS: GESTÃO COMPARTILHADA NO FIREBASE (AUTO-SAVE)
+        // HUB DE ROTAS: GESTÃO COMPARTILHADA NO FIREBASE & OFFLINE
         // -------------------------------------------------------------
         function salvarEstadoRotaAtivaNoBanco() {
             if (!rotaAtivaId || rotaAtual.length === 0) return;
@@ -1984,12 +2327,30 @@
                 total_pacotes: rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0),
                 paradas_finalizadas: concluidas,
                 distancia_km: parseFloat(calcularDistanciaTotalRota(rotaAtual).toFixed(1)),
+                geometria_ruas: rotaGeometriaRuasCache || [],
                 paradas: rotaAtual
             };
 
+            let rotaJson = JSON.stringify(rotaObj);
+
+            // 1. Salva automaticamente no Firebase (quando online)
             if (window.Android && window.Android.salvarRotaAuto) {
-                window.Android.salvarRotaAuto(rotaAtivaId, JSON.stringify(rotaObj));
+                window.Android.salvarRotaAuto(rotaAtivaId, rotaJson);
             }
+
+            // 2. Salva localmente offline (no aparelho) para garantir acesso sem internet!
+            if (window.Android && window.Android.salvarRotaOffline) {
+                window.Android.salvarRotaOffline(rotaAtivaId, rotaJson);
+            }
+            try {
+                localStorage.setItem('offline_rota_' + rotaAtivaId, rotaJson);
+                localStorage.setItem('offline_rota_ativa', rotaJson);
+            } catch (e) {}
+        }
+
+        function baixarRotaOfflineManual() {
+            salvarEstadoRotaAtivaNoBanco();
+            showToast("💾 Rota salva com sucesso para uso 100% Offline!");
         }
 
         function recarregarRotasNuvem() {
@@ -2008,8 +2369,9 @@
             const statusEl = document.getElementById('sync-rotas-status');
 
             if (!success) {
-                if (container) container.innerHTML = `<div class="card" style="text-align: center; color: #ef4444; padding: 20px;">Falha ao carregar rotas: ${msg}</div>`;
-                if (statusEl) { statusEl.innerText = "⚠️ Erro Conexão"; statusEl.style.color = "#ef4444"; }
+                // Se o Firebase falhar por falta de internet, carrega rotas salvas offline no aparelho!
+                if (statusEl) { statusEl.innerText = "📡 Modo Offline"; statusEl.style.color = "#f59e0b"; }
+                carregarRotasSalvasOfflineLocalmente();
                 return;
             }
 
@@ -2043,20 +2405,50 @@
             if (counterEl) counterEl.innerText = lista.length;
 
             if (lista.length === 0) {
-                if (container) {
-                    container.innerHTML = `
-                        <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
-                            <div style="font-size: 32px; margin-bottom: 8px;">☁️</div>
-                            <div style="font-size: 15px; font-weight: bold; color: var(--text-main); margin-bottom: 4px;">Nenhuma rota no banco ainda</div>
-                            <div style="font-size: 12px; margin-bottom: 14px;">Crie uma rota abaixo. Ela será salva na nuvem e aparecerá em todos os celulares!</div>
-                            <button class="btn-big-scan" style="max-width: 250px; margin: 0 auto; padding: 10px; font-size: 14px;" onclick="abrirModalCriarRota()">
-                                ➕ Criar Nova Rota
-                            </button>
-                        </div>
-                    `;
-                }
+                carregarRotasSalvasOfflineLocalmente();
                 return;
             }
+
+            renderizarCartoesRotas(lista);
+        };
+
+        function carregarRotasSalvasOfflineLocalmente() {
+            let container = document.getElementById('lista-rotas-container');
+            let offlineStr = "";
+            if (window.Android && window.Android.obterUltimaRotaAtivaOffline) {
+                offlineStr = window.Android.obterUltimaRotaAtivaOffline();
+            }
+            if (!offlineStr) {
+                offlineStr = localStorage.getItem('offline_rota_ativa') || "";
+            }
+
+            if (offlineStr) {
+                try {
+                    let offlineRota = JSON.parse(offlineStr);
+                    todasRotasNuvem[offlineRota.id] = offlineRota;
+                    renderizarCartoesRotas([offlineRota]);
+                    showToast("📡 Carregando dados da rota salva na memória offline");
+                    return;
+                } catch (e) {}
+            }
+
+            if (container) {
+                container.innerHTML = `
+                    <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">☁️</div>
+                        <div style="font-size: 15px; font-weight: bold; color: var(--text-main); margin-bottom: 4px;">Nenhuma rota no banco ainda</div>
+                        <div style="font-size: 12px; margin-bottom: 14px;">Crie uma rota abaixo. Ela será salva na nuvem e no aparelho para uso offline!</div>
+                        <button class="btn-big-scan" style="max-width: 250px; margin: 0 auto; padding: 10px; font-size: 14px;" onclick="abrirModalCriarRota()">
+                            ➕ Criar Nova Rota
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderizarCartoesRotas(lista) {
+            const container = document.getElementById('lista-rotas-container');
+            if (!container) return;
 
             let html = '';
             lista.forEach(r => {
@@ -2075,6 +2467,7 @@
                                 <div class="route-card-title">${r.titulo || 'Rota sem título'}</div>
                                 <div class="route-card-meta">
                                     <span>📅 ${dataStr}</span>
+                                    <span>💾 Offline Pronto</span>
                                     ${r.dispositivo ? '<span>📱 ' + r.dispositivo + '</span>' : ''}
                                 </div>
                             </div>
@@ -2117,11 +2510,25 @@
                 `;
             });
 
-            if (container) container.innerHTML = html;
-        };
+            container.innerHTML = html;
+        }
 
         function abrirRotaNuvem(rotaId) {
             let rotaObj = todasRotasNuvem[rotaId];
+            if (!rotaObj) {
+                // Tenta carregar offline
+                let offlineStr = "";
+                if (window.Android && window.Android.obterRotaOffline) {
+                    offlineStr = window.Android.obterRotaOffline(rotaId);
+                }
+                if (!offlineStr) {
+                    offlineStr = localStorage.getItem('offline_rota_' + rotaId) || "";
+                }
+                if (offlineStr) {
+                    try { rotaObj = JSON.parse(offlineStr); } catch (e) {}
+                }
+            }
+
             if (!rotaObj) {
                 showToast("Rota não encontrada!");
                 return;
@@ -2143,6 +2550,9 @@
             rotaBrutaOriginal = paradas.map(p => ({ ...p }));
             rotaAtual = paradas.map(p => ({ ...p }));
             isRotaOtimizada = true;
+
+            // Restaura curvas das ruas salvas
+            rotaGeometriaRuasCache = (rotaObj.geometria_ruas && rotaObj.geometria_ruas.length > 0) ? rotaObj.geometria_ruas : null;
 
             pacotesBipados.clear();
             rotaAtual.forEach(p => {
@@ -2169,6 +2579,11 @@
             if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(`Rota ${rotaAtivaMeta.titulo} aberta.`);
             }
+
+            // Se ainda não tem traçado das ruas, baixa
+            if (!rotaGeometriaRuasCache) {
+                baixarGeometriaRuasReais();
+            }
         }
 
         function alternarStatusRotaCard(rotaId, novoStatus) {
@@ -2187,6 +2602,7 @@
                     rotaAtivaId = null;
                     rotaAtual = [];
                     rotaBrutaOriginal = [];
+                    rotaGeometriaRuasCache = null;
                     document.getElementById('banner-rota-ativa').style.display = 'none';
                     renderizarParadas();
                     renderizarMapa();
@@ -2212,6 +2628,7 @@
             rotaBrutaOriginal = paradas.map(p => ({ ...p }));
             rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
             isRotaOtimizada = true;
+            rotaGeometriaRuasCache = null; // Calcula ruas no OSRM
 
             pacotesBipados.clear();
             historicoBipes = [];
@@ -2246,13 +2663,13 @@
             switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
 
             let totalPacotes = rotaAtivaMeta.total_pacotes;
-            showToast(`🚀 Rota criada e salva no banco! (${rotaAtual.length} paradas)`);
+            showToast(`🚀 Rota criada e salva no banco e offline! (${rotaAtual.length} paradas)`);
             if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
             }
 
-            // AUTO-SAVE DIRETO NO FIREBASE (SEM PRECISAR DE BOTÃO SALVAR)
             salvarEstadoRotaAtivaNoBanco();
+            baixarGeometriaRuasReais();
         };
 
         // Datasets Prontos
@@ -2527,7 +2944,33 @@
                     setAudioMuted(window.Android.isAudioMuted());
                 } catch (e) {}
             }
+            if (window.Android && window.Android.solicitarRastreamentoGPS) {
+                window.Android.solicitarRastreamentoGPS();
+            }
+
+            // Recupera rota ativa offline se houver
+            let rotaSalvaLocal = "";
+            if (window.Android && window.Android.obterUltimaRotaAtivaOffline) {
+                rotaSalvaLocal = window.Android.obterUltimaRotaAtivaOffline();
+            }
+            if (!rotaSalvaLocal) {
+                rotaSalvaLocal = localStorage.getItem('offline_rota_ativa') || "";
+            }
+            if (rotaSalvaLocal) {
+                try {
+                    let rObj = JSON.parse(rotaSalvaLocal);
+                    todasRotasNuvem[rObj.id] = rObj;
+                } catch (e) {}
+            }
+
             recarregarRotasNuvem();
+
+            // Escuta mudanças de conectividade para sincronizar caso tenha voltado a internet
+            window.addEventListener('online', () => {
+                showToast("🌐 Conexão restaurada! Sincronizando com Firebase...");
+                salvarEstadoRotaAtivaNoBanco();
+                recarregarRotasNuvem();
+            });
         });
     </script>
 </body>

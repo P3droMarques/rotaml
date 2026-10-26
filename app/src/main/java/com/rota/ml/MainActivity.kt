@@ -5,9 +5,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -22,6 +26,8 @@ import android.webkit.*
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -91,10 +97,87 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private var locationManager: LocationManager? = null
+    private var locationListener: LocationListener? = null
+
     override fun onResume() {
         super.onResume()
         atualizarStatusAcessibilidade()
         atualizarBotaoLeitor()
+        iniciarRastreamentoGPS()
+    }
+
+    private fun iniciarRastreamentoGPS() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                1001
+            )
+            return
+        }
+
+        try {
+            if (locationManager == null) {
+                locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            }
+
+            if (locationListener == null) {
+                locationListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        val lat = location.latitude
+                        val lng = location.longitude
+                        val bearing = if (location.hasBearing()) location.bearing else 0.0f
+                        val speedKmh = if (location.hasSpeed()) (location.speed * 3.6f) else 0.0f
+                        val accuracy = if (location.hasAccuracy()) location.accuracy else 0.0f
+
+                        binding.webView.post {
+                            binding.webView.evaluateJavascript(
+                                "if (window.atualizarPosicaoCarro) window.atualizarPosicaoCarro($lat, $lng, $bearing, $speedKmh, $accuracy);",
+                                null
+                            )
+                        }
+                    }
+
+                    @Deprecated("Deprecated in Java")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+            }
+
+            locationManager?.let { lm ->
+                val isGpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                val isNetEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+                if (isGpsEnabled) {
+                    lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 1.0f, locationListener!!)
+                }
+                if (isNetEnabled) {
+                    lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2.0f, locationListener!!)
+                }
+
+                val lastLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                lastLoc?.let { loc ->
+                    binding.webView.post {
+                        binding.webView.evaluateJavascript(
+                            "if (window.atualizarPosicaoCarro) window.atualizarPosicaoCarro(${loc.latitude}, ${loc.longitude}, ${loc.bearing}, ${loc.speed * 3.6f}, ${loc.accuracy});",
+                            null
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("GPS", "Erro ao iniciar rastreamento GPS", e)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            iniciarRastreamentoGPS()
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -104,7 +187,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.databaseEnabled = true
-            webChromeClient = WebChromeClient()
+            settings.setGeolocationEnabled(true)
+            webChromeClient = object : WebChromeClient() {
+                override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
+                    callback?.invoke(origin, true, false)
+                }
+            }
             webViewClient = WebViewClient()
             addJavascriptInterface(WebAppInterface(), "Android")
             loadUrl("file:///android_asset/www/index.html")
@@ -1112,7 +1200,84 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    fun buscarGeometriaRuasOSRM(coordsList: String, callback: ((Boolean, String?) -> Unit)? = null) {
+        if (coordsList.isBlank()) {
+            callback?.invoke(false, null)
+            return
+        }
+
+        val url = "https://router.project-osrm.org/route/v1/driving/$coordsList?overview=full&geometries=geojson"
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).header("User-Agent", "RotaML/1.0").build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    val respStr = resp.body?.string() ?: "{}"
+                    val json = JSONObject(respStr)
+                    val routes = json.optJSONArray("routes")
+                    if (routes != null && routes.length() > 0) {
+                        val geom = routes.getJSONObject(0).optJSONObject("geometry")
+                        val coords = geom?.optJSONArray("coordinates")
+                        if (coords != null) {
+                            withContext(Dispatchers.Main) {
+                                callback?.invoke(true, coords.toString())
+                            }
+                            return@launch
+                        }
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, null)
+                }
+            } catch (e: Exception) {
+                Log.e("OSRM", "Erro ao buscar geometria das ruas", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, null)
+                }
+            }
+        }
+    }
+
     inner class WebAppInterface {
+        @JavascriptInterface
+        fun solicitarRastreamentoGPS() {
+            runOnUiThread {
+                iniciarRastreamentoGPS()
+            }
+        }
+
+        @JavascriptInterface
+        fun buscarGeometriaRuasOSRM(coordsList: String) {
+            this@MainActivity.buscarGeometriaRuasOSRM(coordsList) { success, coordsJson ->
+                runOnUiThread {
+                    val safe = if (success && coordsJson != null) coordsJson else "[]"
+                    binding.webView.evaluateJavascript("if (window.receberGeometriaRuasOSRM) window.receberGeometriaRuasOSRM($safe, $success);", null)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun salvarRotaOffline(rotaId: String, jsonStr: String) {
+            prefs.edit()
+                .putString("offline_rota_$rotaId", jsonStr)
+                .putString("offline_rota_ativa_id", rotaId)
+                .apply()
+        }
+
+        @JavascriptInterface
+        fun obterRotaOffline(rotaId: String): String {
+            return prefs.getString("offline_rota_$rotaId", "") ?: ""
+        }
+
+        @JavascriptInterface
+        fun obterUltimaRotaAtivaOffline(): String {
+            val id = prefs.getString("offline_rota_ativa_id", "") ?: ""
+            if (id.isBlank()) return ""
+            return prefs.getString("offline_rota_$id", "") ?: ""
+        }
+
         @JavascriptInterface
         fun bipar() {
             runOnUiThread {
@@ -1401,6 +1566,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        locationListener?.let { locationManager?.removeUpdates(it) }
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
