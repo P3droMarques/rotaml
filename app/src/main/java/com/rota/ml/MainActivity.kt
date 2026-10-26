@@ -6,23 +6,27 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.ImageDecoder
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.webkit.*
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.dialog.MaterialDialogs
-import com.google.android.material.dialog.MaterialAlertDialogBuilder as AlertDialogBuilder
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.rota.ml.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
 import okhttp3.*
@@ -38,6 +42,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var prefs: SharedPreferences
     private var tts: TextToSpeech? = null
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+
+    private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (!uris.isNullOrEmpty()) {
+            processarImagensGaleria(uris)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,7 +98,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun setupListeners() {
         binding.btnLer.setOnClickListener {
-            toggleCaptura()
+            mostrarOpcoesDeLeitura()
+        }
+
+        binding.btnLerFoto.setOnClickListener {
+            abrirSeletorGaleria()
         }
 
         binding.btnRota.setOnClickListener {
@@ -177,7 +191,29 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .show()
     }
 
-    private fun toggleCaptura() {
+    private fun mostrarOpcoesDeLeitura() {
+        if (LeitorEnviosService.capturando) {
+            toggleCapturaAoVivo()
+            return
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("📱 Como deseja ler a rota?")
+            .setItems(arrayOf(
+                "⚡ 1. Tela ao Vivo (App Mercado Envios Extra)",
+                "🖼️ 2. Ler Foto / Print da Galeria (OCR com IA)"
+            )) { _, which ->
+                if (which == 0) {
+                    toggleCapturaAoVivo()
+                } else {
+                    abrirSeletorGaleria()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun toggleCapturaAoVivo() {
         if (!isAccessibilityServiceEnabled()) {
             solicitarAtivacaoAcessibilidade()
             return
@@ -190,7 +226,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
             binding.btnLer.text = "⏹ Lendo (0)..."
             binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
-            Toast.makeText(this, "Vá para o app Envios Extra e role a lista de paradas!\nO botão flutuante amarelo mostrará a contagem.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Vá para o app Envios Extra e role a lista de paradas!\nO botão flutuante amarelo mostrará as paradas lidas.", Toast.LENGTH_LONG).show()
         } else {
             LeitorEnviosService.instance?.pararCapturaEFecharOverlay() ?: run {
                 LeitorEnviosService.capturando = false
@@ -199,6 +235,92 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             binding.btnLer.text = if (total > 0) "1. Ler Tela ($total)" else "1. Ler Tela"
             binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
             Toast.makeText(this, "Captura concluída: $total paradas identificadas!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun abrirSeletorGaleria() {
+        try {
+            pickImagesLauncher.launch("image/*")
+        } catch (e: Exception) {
+            Toast.makeText(this, "Erro ao abrir galeria: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun processarImagensGaleria(uris: List<Uri>) {
+        binding.progressBar.visibility = View.VISIBLE
+        Toast.makeText(this, "Lendo ${uris.size} foto(s) com IA (OCR)...", Toast.LENGTH_SHORT).show()
+
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        val todasLinhas = Collections.synchronizedList(mutableListOf<String>())
+        var processadas = 0
+
+        for (uri in uris) {
+            try {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(contentResolver, uri)) { decoder, _, _ ->
+                        decoder.isMutableRequired = true
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                }
+
+                val image = InputImage.fromBitmap(bitmap, 0)
+                recognizer.process(image)
+                    .addOnSuccessListener { visionText ->
+                        for (block in visionText.textBlocks) {
+                            for (line in block.lines) {
+                                val s = line.text.trim()
+                                if (s.length >= 2) {
+                                    todasLinhas.add(s)
+                                    LeitorEnviosService.textosCapturados.add(s)
+                                }
+                            }
+                        }
+                        processadas++
+                        if (processadas == uris.size) {
+                            finalizarProcessamentoOcr(todasLinhas)
+                        }
+                    }
+                    .addOnFailureListener {
+                        processadas++
+                        if (processadas == uris.size) {
+                            finalizarProcessamentoOcr(todasLinhas)
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e("OCR", "Erro carregando imagem $uri", e)
+                processadas++
+                if (processadas == uris.size) {
+                    finalizarProcessamentoOcr(todasLinhas)
+                }
+            }
+        }
+    }
+
+    private fun finalizarProcessamentoOcr(linhas: List<String>) {
+        scope.launch {
+            binding.progressBar.visibility = View.GONE
+            val paradas = EnviosExtraParser.parseLinhas(linhas)
+            if (paradas.isEmpty()) {
+                Toast.makeText(this@MainActivity, "Nenhum endereço identificado na imagem. Verifique se o print está legível.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+
+            synchronized(LeitorEnviosService.paradasDetectadas) {
+                LeitorEnviosService.paradasDetectadas.clear()
+                LeitorEnviosService.paradasDetectadas.addAll(paradas)
+            }
+
+            atualizarBotaoLeitor()
+            Toast.makeText(this@MainActivity, "🎉 Sucesso! ${paradas.size} paradas lidas da foto!", Toast.LENGTH_SHORT).show()
+
+            val jsonArray = JSONArray()
+            for (p in paradas) {
+                jsonArray.put(p.toJson())
+            }
+
+            geocoderAndRoute(jsonArray)
         }
     }
 
@@ -283,7 +405,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (paradasProntas.isEmpty() && rawTextList.isEmpty()) {
                 MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle("📍 Nenhuma Parada Lida Ainda")
-                    .setMessage("Ainda não foram detectados dados na tela do Mercado Envios Extra.\n\nComo usar:\n1. Toque em '1. Ler Tela'\n2. Abra o app Envios Extra e role a lista de paradas devagar\n3. Toque em 'Gerar Rota ✅' no botão flutuante amarelo!\n\nDeseja carregar as 11 paradas dos seus prints agora para ver o trajeto no mapa?")
+                    .setMessage("Ainda não foram detectados dados da tela.\n\nVocê pode:\n1. Tocar em '1. Ler Tela' para rolar o app Envios Extra\n2. Tocar no botão 🖼️ para escolher um print da galeria\n\nDeseja carregar as 11 paradas dos seus prints agora para testar?")
                     .setPositiveButton("Carregar Rota dos Prints") { _, _ ->
                         binding.webView.post {
                             binding.webView.evaluateJavascript("carregar11ParadasEnviosExtra(true)", null)
@@ -326,7 +448,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
             if (paradasJsonArray.length() == 0) {
                 binding.progressBar.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Não foi possível identificar endereços no texto. Role a tela do app Envios Extra devagar e tente novamente.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Não foi possível identificar endereços no texto. Role a tela do app Envios Extra devagar ou selecione o print pelo botão 🖼️.", Toast.LENGTH_LONG).show()
                 return@launch
             }
 

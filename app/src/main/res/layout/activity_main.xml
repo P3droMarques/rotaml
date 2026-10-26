@@ -83,6 +83,17 @@
                     android:textSize="16sp"
                     android:textColor="@color/text_main" />
 
+                <!-- Ler Foto / Print OCR Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLerFoto"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:padding="0dp"
+                    android:text="🖼️"
+                    android:textSize="16sp"
+                    android:textColor="@color/text_main" />
+
                 <!-- Config Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnConfig"

@@ -45,8 +45,9 @@ dependencies {
     implementation("androidx.webkit:webkit:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
-    // QR Code Scanner
+    // QR Code Scanner and OCR Text Recognition
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
     
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")

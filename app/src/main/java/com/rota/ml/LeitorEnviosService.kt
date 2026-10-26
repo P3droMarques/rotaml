@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -14,6 +15,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -23,6 +25,9 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.LinkedHashSet
 
 class LeitorEnviosService : AccessibilityService() {
@@ -212,26 +217,52 @@ class LeitorEnviosService : AccessibilityService() {
             val bgDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 32f
-                setColor(Color.parseColor("#E6161B22")) // Fundo escuro premium com leve transparência
+                setColor(Color.parseColor("#F0161B22")) // Fundo escuro premium
                 setStroke(2, Color.parseColor("#FFE600")) // Borda amarela Mercado Livre
             }
 
             val container = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 background = bgDrawable
-                setPadding(24, 16, 20, 16)
+                setPadding(20, 14, 16, 14)
                 gravity = Gravity.CENTER_VERTICAL
                 elevation = 16f
             }
 
             val txtStatus = TextView(this).apply {
-                text = "⚡ RotaML: Role a tela... (0 paradas)"
+                text = "⚡ RotaML: 0 paradas"
                 setTextColor(Color.parseColor("#F0F6FC"))
                 textSize = 12f
-                setPadding(0, 0, 16, 0)
+                setPadding(0, 0, 12, 0)
             }
             txtOverlayStatus = txtStatus
             container.addView(txtStatus)
+
+            // Botão OCR para capturar a tela por imagem diretamente
+            val btnOcr = Button(this).apply {
+                text = "📷 OCR"
+                textSize = 11f
+                setTextColor(Color.WHITE)
+                val btnOcrBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 20f
+                    setColor(Color.parseColor("#30363D"))
+                    setStroke(1, Color.parseColor("#FFE600"))
+                }
+                background = btnOcrBg
+                setPadding(14, 6, 14, 6)
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = 8
+                }
+                layoutParams = lp
+                setOnClickListener {
+                    executarOcrDaTelaAtual()
+                }
+            }
+            container.addView(btnOcr)
 
             val btnConcluir = Button(this).apply {
                 text = "Gerar Rota ✅"
@@ -296,12 +327,68 @@ class LeitorEnviosService : AccessibilityService() {
     private fun atualizarOverlay(totalParadas: Int) {
         txtOverlayStatus?.let { tv ->
             if (totalParadas == 0) {
-                tv.text = "⚡ RotaML: Role a lista de paradas..."
+                tv.text = "⚡ RotaML: Role ou toque em OCR"
                 tv.setTextColor(Color.parseColor("#FFE600"))
             } else {
                 tv.text = "⚡ RotaML: $totalParadas paradas lidas!"
                 tv.setTextColor(Color.parseColor("#10B981")) // Verde sucesso
             }
+        }
+    }
+
+    // Executa OCR da tela através da API nativa de captura de tela de acessibilidade do Android 11+
+    private fun executarOcrDaTelaAtual() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            txtOverlayStatus?.text = "⚡ Lendo texto da tela..."
+            try {
+                takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshotResult: ScreenshotResult) {
+                        val hwBuffer = screenshotResult.hardwareBuffer
+                        val colorSpace = screenshotResult.colorSpace
+                        val bitmap = Bitmap.wrapHardwareBuffer(hwBuffer, colorSpace)
+                        val copyBitmap = bitmap?.copy(Bitmap.Config.ARGB_8888, true)
+                        hwBuffer.close()
+
+                        if (copyBitmap != null) {
+                            processarBitmapComMlKit(copyBitmap)
+                        } else {
+                            txtOverlayStatus?.text = "⚡ Erro ao ler tela"
+                        }
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        txtOverlayStatus?.text = "⚡ Falha na captura ($errorCode)"
+                    }
+                })
+            } catch (e: Exception) {
+                txtOverlayStatus?.text = "⚡ Erro OCR: ${e.message}"
+            }
+        } else {
+            txtOverlayStatus?.text = "⚡ Use a opção 🖼️ Ler Foto no app"
+        }
+    }
+
+    private fun processarBitmapComMlKit(bitmap: Bitmap) {
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            recognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    for (block in visionText.textBlocks) {
+                        for (line in block.lines) {
+                            val s = line.text.trim()
+                            if (s.length >= 2) {
+                                textosCapturados.add(s)
+                            }
+                        }
+                    }
+                    processarParadasEmTempoReal()
+                }
+                .addOnFailureListener { e ->
+                    txtOverlayStatus?.text = "⚡ Erro no OCR: ${e.message}"
+                }
+        } catch (e: Exception) {
+            Log.e("LeitorEnviosService", "Erro processando OCR", e)
         }
     }
 
