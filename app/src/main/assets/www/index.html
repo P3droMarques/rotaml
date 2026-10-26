@@ -531,55 +531,199 @@
             letter-spacing: 0.5px;
         }
 
-        /* Leaflet Map */
+        /* Leaflet Map & Waze Aesthetics */
         #map-container {
             position: relative;
             flex: 1;
-            height: calc(100vh - 190px);
-            min-height: 400px;
-            border-radius: var(--radius-md);
+            height: calc(100vh - 130px);
+            min-height: 480px;
+            border-radius: 16px;
             overflow: hidden;
-            border: 1px solid var(--border);
-            background: #111827;
+            border: 1px solid #1e293b;
+            background: #0f172a;
         }
 
-        #map { height: 100%; width: 100%; background: #111827; }
+        #map { height: 100%; width: 100%; background: #0f172a; }
 
-        .map-stats-overlay {
+        /* Waze-style map tiles filter for dark navigation */
+        .leaflet-tile {
+            filter: brightness(0.88) contrast(1.15) saturate(0.9);
+        }
+
+        /* Single Unified Waze Navigation HUD (Zero Overlap!) */
+        .waze-hud-container {
             position: absolute;
             top: 10px;
             left: 10px;
             right: 10px;
-            background: rgba(22, 27, 34, 0.94);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(56, 189, 248, 0.4);
+            border-radius: 14px;
+            padding: 9px 12px;
             z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            flex-direction: column;
+            gap: 7px;
+            animation: fadeIn 0.3s ease;
         }
 
-        /* Floating Next Stop Banner */
-        .next-stop-banner {
-            position: absolute;
-            top: 60px;
-            left: 10px;
-            right: 10px;
-            background: rgba(33, 38, 45, 0.95);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--ml-yellow);
-            border-radius: var(--radius-sm);
-            padding: 8px 12px;
-            z-index: 1000;
+        .waze-hud-main-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s ease;
+            gap: 9px;
+        }
+
+        .waze-turn-icon-box {
+            background: var(--ml-yellow);
+            color: #000;
+            font-weight: 900;
+            font-size: 13px;
+            padding: 7px 10px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            white-space: nowrap;
+            box-shadow: 0 2px 10px rgba(255, 230, 0, 0.4);
+        }
+
+        .waze-address-box {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .waze-address-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .waze-address-sub {
+            font-size: 11px;
+            color: #38bdf8;
+            font-weight: 700;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .waze-actions-box {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .waze-btn-app {
+            background: #00d2ff;
+            color: #000;
+            font-weight: 800;
+            font-size: 11px;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 210, 255, 0.4);
+        }
+
+        .waze-btn-concluir {
+            background: #10b981;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 6px 11px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .waze-hud-sub-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 5px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .waze-sub-pill {
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #cbd5e1;
+            white-space: nowrap;
+            font-size: 10px;
+        }
+
+        .waze-sub-pill.status { color: #facc15; }
+        .waze-sub-pill.entregas { color: #34d399; }
+        .waze-sub-pill.speed { color: #60a5fa; }
+        .waze-sub-pill.follow-toggle {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .waze-sub-pill.follow-toggle.active {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);
+            border-color: #60a5fa;
+        }
+
+        /* Waze Pin & Street Label Callout */
+        .waze-pin-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            transform: translate(-14px, -14px);
+        }
+        .waze-pin-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 13px;
+            border: 2px solid #ffffff;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+        }
+        .waze-pin-circle.delivered {
+            background: #10b981 !important;
+            color: #ffffff !important;
+            border-color: #6ee7b7;
+        }
+        .waze-pin-tag {
+            background: rgba(15, 23, 42, 0.92);
+            color: #f8fafc;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 7px;
+            border-radius: 6px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .map-controls-overlay {
@@ -884,46 +1028,43 @@
             </div>
         </div>
 
-        <!-- TAB 3: MAPA INTERATIVO (COM RASTREAMENTO DO CARRO E RUAS REAIS) -->
+        <!-- TAB 3: MAPA INTERATIVO (WAZE STYLE COM CARRINHO E RUAS REAIS) -->
         <div id="tab-mapa" class="tab-content">
             <div id="map-container">
                 <div id="map"></div>
                 
-                <!-- Floating Info Overlay Top -->
-                <div class="map-stats-overlay" id="map-stats-box">
-                    <div>
-                        <b id="map-route-title" style="color: var(--ml-yellow); font-size: 13px;">Carregue uma rota</b>
-                        <div id="map-route-sub" style="font-size: 11px; color: var(--text-muted);">Aguardando dados...</div>
+                <!-- Single Unified Waze Navigation HUD (Zero Overlap!) -->
+                <div id="waze-top-hud" class="waze-hud-container">
+                    <div class="waze-hud-main-row">
+                        <div class="waze-turn-icon-box" id="waze-stop-badge">
+                            👉 #1
+                        </div>
+                        <div class="waze-address-box">
+                            <div id="waze-stop-address" class="waze-address-title">Carregue ou abra uma rota</div>
+                            <div id="waze-stop-dist" class="waze-address-sub">Aguardando dados da rota...</div>
+                        </div>
+                        <div class="waze-actions-box">
+                            <button id="btn-waze-next" class="waze-btn-app" onclick="navegarWazeProximaParada()">
+                                🚗 Waze
+                            </button>
+                            <button id="btn-concluir-next" class="waze-btn-concluir" onclick="finalizarProximaParada()">
+                                ✅
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <span id="map-route-entregas-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #10b981;">
+
+                    <div class="waze-hud-sub-row">
+                        <span id="waze-route-title" class="waze-sub-pill status">
+                            ⚡ Rota nas Ruas (0 paradas)
+                        </span>
+                        <span id="waze-entregas-badge" class="waze-sub-pill entregas">
                             0/0 Entregues
                         </span>
-                        <span id="map-car-speed-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(37, 99, 235, 0.25); color: #60a5fa;">
-                            🚗 GPS
+                        <span id="waze-speed-badge" class="waze-sub-pill speed">
+                            🚗 Parado
                         </span>
-                    </div>
-                </div>
-
-                <!-- Floating Next Stop Banner -->
-                <div id="next-stop-floating-card" class="next-stop-banner" style="display: none;">
-                    <div>
-                        <div style="font-size: 10px; font-weight: 800; color: var(--ml-yellow); text-transform: uppercase;">
-                            👉 PRÓXIMA PARADA (<span id="next-stop-num">#1</span>)
-                        </div>
-                        <div id="next-stop-address" style="font-size: 13px; font-weight: 700; color: #fff; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            Rua...
-                        </div>
-                        <div id="next-stop-dist" style="font-size: 11px; color: #9ca3af;">
-                            Calculando distância...
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 4px;">
-                        <button id="btn-next-stop-waze" class="btn-action-small" style="padding: 6px 8px; background: #33ccff; color: #000; font-weight: 800; font-size: 11px; border: none;">
-                            🚗 Waze
-                        </button>
-                        <button id="btn-next-stop-finalizar" class="btn-action-small" style="padding: 6px 8px; background: #10b981; color: #fff; font-weight: 800; font-size: 11px; border: none;">
-                            ✅
+                        <button id="btn-seguir-carro-hud" class="waze-sub-pill follow-toggle" onclick="toggleSeguirCarro()">
+                            🎯 Seguir Carro
                         </button>
                     </div>
                 </div>
@@ -1327,11 +1468,11 @@
             carSpeedKmh = Math.max(0, Math.round(speedKmh || 0));
 
             // Atualiza HUD no mapa
-            const speedEl = document.getElementById('map-car-speed-badge');
+            const speedEl = document.getElementById('waze-speed-badge');
             if (speedEl) {
                 let speedText = carSpeedKmh > 3 ? `${carSpeedKmh} km/h` : 'Parado';
                 speedEl.innerText = `🚗 ${speedText}`;
-                speedEl.style.color = carSpeedKmh > 0 ? '#10b981' : '#60a5fa';
+                speedEl.style.color = carSpeedKmh > 0 ? '#34d399' : '#60a5fa';
             }
 
             if (!map) return;
@@ -1347,7 +1488,7 @@
                 carMarker.setIcon(criarIconeCarro(bearing));
             }
 
-            // Modo Seguir Carro (Navegação)
+            // Modo Seguir Carro (Navegação Ativa)
             if (isSeguirCarroAtivo && map) {
                 map.panTo([lat, lng], { animate: true, duration: 0.8 });
             }
@@ -1373,6 +1514,7 @@
 
         function atualizarBotaoSeguirCarro() {
             const btn = document.getElementById('btn-seguir-carro');
+            const btnHud = document.getElementById('btn-seguir-carro-hud');
             if (btn) {
                 if (isSeguirCarroAtivo) {
                     btn.classList.add('follow-active');
@@ -1382,12 +1524,36 @@
                     btn.innerHTML = '🎯 Seguir Carro';
                 }
             }
+            if (btnHud) {
+                if (isSeguirCarroAtivo) {
+                    btnHud.classList.add('active');
+                    btnHud.innerHTML = '🎯 Seguindo 🚗';
+                } else {
+                    btnHud.classList.remove('active');
+                    btnHud.innerHTML = '🎯 Seguir Carro';
+                }
+            }
+        }
+
+        function navegarWazeProximaParada() {
+            let proxIdx = rotaAtual.findIndex(p => !p.finalizada);
+            if (proxIdx !== -1) {
+                navegarWaze(proxIdx);
+            } else {
+                showToast("Todas as paradas já foram concluídas!");
+            }
+        }
+
+        function finalizarProximaParada() {
+            let proxIdx = rotaAtual.findIndex(p => !p.finalizada);
+            if (proxIdx !== -1) {
+                alternarFinalizarParada(proxIdx);
+            } else {
+                showToast("Todas as paradas já foram concluídas!");
+            }
         }
 
         function atualizarProximaParadaDistancia() {
-            const card = document.getElementById('next-stop-floating-card');
-            if (!card) return;
-
             let proxIdx = -1;
             let proxParada = null;
             for (let i = 0; i < rotaAtual.length; i++) {
@@ -1398,14 +1564,19 @@
                 }
             }
 
+            const badgeEl = document.getElementById('waze-stop-badge');
+            const addrEl = document.getElementById('waze-stop-address');
+            const distEl = document.getElementById('waze-stop-dist');
+
             if (!proxParada || !proxParada.lat) {
-                card.style.display = 'none';
+                if (badgeEl) badgeEl.innerText = '🏁';
+                if (addrEl) addrEl.innerText = (rotaAtual.length > 0) ? 'Todas as paradas concluídas!' : 'Nenhuma rota aberta';
+                if (distEl) distEl.innerText = 'Toque em Rotas para iniciar';
                 return;
             }
 
-            card.style.display = 'flex';
-            document.getElementById('next-stop-num').innerText = `#${proxIdx + 1}`;
-            document.getElementById('next-stop-address').innerText = proxParada.endereco || proxParada.destinatario || 'Endereço';
+            if (badgeEl) badgeEl.innerText = `👉 #${proxIdx + 1}`;
+            if (addrEl) addrEl.innerText = proxParada.endereco || proxParada.destinatario || 'Endereço';
 
             let distStr = 'Próxima entrega';
             if (carLatLng) {
@@ -1416,16 +1587,7 @@
                     distStr = `A cerca de ${distKm.toFixed(1)} km daqui`;
                 }
             }
-            document.getElementById('next-stop-dist').innerText = distStr;
-
-            const btnWaze = document.getElementById('btn-next-stop-waze');
-            if (btnWaze) {
-                btnWaze.onclick = () => navegarWaze(proxIdx);
-            }
-            const btnFin = document.getElementById('btn-next-stop-finalizar');
-            if (btnFin) {
-                btnFin.onclick = () => alternarFinalizarParada(proxIdx);
-            }
+            if (distEl) distEl.innerText = distStr;
         }
 
         // Tab Switching
@@ -1638,74 +1800,128 @@
         }
 
         // -------------------------------------------------------------
-        // ROTEAMENTO OSRM: TRAÇADO REAL SEGUINDO RUAS E ESQUINAS
+        // ROTEAMENTO OSRM & OFFLINE GRID: TRAÇADO REAL PELAS RUAS (ESTILO WAZE)
         // -------------------------------------------------------------
+        function gerarTraçadoRuasOffline(p1, p2) {
+            // Gera esquinas a 90 graus seguindo a malha de quarteirões urbanos (Manhattan routing)
+            let midLat = p1.lat;
+            let midLng = p2.lng;
+            return [[p1.lat, p1.lng], [midLat, midLng], [p2.lat, p2.lng]];
+        }
+
+        function construirMalhaOrtogonalOffline(pontos) {
+            let resultado = [];
+            for (let i = 0; i < pontos.length - 1; i++) {
+                let seg = gerarTraçadoRuasOffline(pontos[i], pontos[i+1]);
+                if (resultado.length > 0) seg.shift();
+                resultado.push(...seg);
+            }
+            return resultado;
+        }
+
         function baixarGeometriaRuasReais() {
             let pontosComCoords = rotaAtual.filter(p => p.lat && p.lng);
             if (pontosComCoords.length < 2) return;
 
+            // Se já temos as curvas reais em cache salvo na memória, usa imediatamente!
+            if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
+                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
+                return;
+            }
+
             let coordsStr = pontosComCoords.map(p => `${p.lng},${p.lat}`).join(';');
             
+            // 1. Tentar nativo Android com servidores múltiplos
+            let respondeuNativo = false;
             if (window.Android && window.Android.buscarGeometriaRuasOSRM) {
                 window.Android.buscarGeometriaRuasOSRM(coordsStr);
-            } else {
-                // Fallback browser fetch
-                let url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
-                fetch(url).then(r => r.json()).then(data => {
-                    let coords = data.routes && data.routes[0] ? data.routes[0].geometry.coordinates : [];
-                    window.receberGeometriaRuasOSRM(coords, true);
-                }).catch(() => {
-                    console.log("[OSRM] Fallback offline ativo.");
-                });
+                respondeuNativo = true;
             }
+
+            // 2. Fallback Web direto em paralelo (caso Android demore ou retorne vazio)
+            setTimeout(() => {
+                if (!rotaGeometriaRuasCache) {
+                    const routingUrls = [
+                        `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`,
+                        `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`
+                    ];
+                    
+                    const tentarUrl = (idx) => {
+                        if (idx >= routingUrls.length) {
+                            if (!rotaGeometriaRuasCache) {
+                                // Fallback inteligente offline: traçado ortogonal em quarteirões (sem cruzar prédios!)
+                                let offlineGrid = construirMalhaOrtogonalOffline(pontosComCoords);
+                                window.receberGeometriaRuasOSRM(offlineGrid, false);
+                            }
+                            return;
+                        }
+                        fetch(routingUrls[idx])
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.routes && data.routes[0] && data.routes[0].geometry) {
+                                    let coords = data.routes[0].geometry.coordinates;
+                                    window.receberGeometriaRuasOSRM(coords, true);
+                                } else {
+                                    tentarUrl(idx + 1);
+                                }
+                            })
+                            .catch(() => tentarUrl(idx + 1));
+                    };
+                    tentarUrl(0);
+                }
+            }, respondeuNativo ? 3200 : 50);
         }
 
         window.receberGeometriaRuasOSRM = function(coordsGeoJson, success) {
             if (success && Array.isArray(coordsGeoJson) && coordsGeoJson.length > 0) {
                 // Inverte [lng, lat] para Leaflet [lat, lng]
-                rotaGeometriaRuasCache = coordsGeoJson.map(c => [c[1], c[0]]);
-                renderizarTrilhasRuas(rotaGeometriaRuasCache);
-                // Salva offline com a rota ativa
+                rotaGeometriaRuasCache = coordsGeoJson.map(c => {
+                    if (c[0] < -30 && c[1] > -30) {
+                        return [c[1], c[0]];
+                    }
+                    return [c[0], c[1]];
+                });
+                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
                 salvarEstadoRotaAtivaNoBanco();
-            } else {
-                // Fallback se OSRM offline: liga os pontos
-                let fallback = rotaAtual.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]);
-                renderizarTrilhasRuas(fallback);
+            } else if (!rotaGeometriaRuasCache) {
+                // Fallback offline estruturado em quarteirões (esquinas a 90 graus)
+                let pontosComCoords = rotaAtual.filter(p => p.lat && p.lng);
+                let fallback = construirMalhaOrtogonalOffline(pontosComCoords);
+                renderizarTrilhasRuas(fallback, false);
             }
         };
 
-        function renderizarTrilhasRuas(latlngs) {
+        function renderizarTrilhasRuas(latlngs, isReal) {
             if (!map || !latlngs || latlngs.length < 2) return;
 
             if (polylineRuas) map.removeLayer(polylineRuas);
             if (polylineBorder) map.removeLayer(polylineBorder);
             if (polylineBruta) map.removeLayer(polylineBruta);
 
-            // 1. Linha de fundo escuro para destacar sobre as ruas do mapa
+            // 1. Linha de fundo escuro contrastante (Estilo Waze)
             polylineBorder = L.polyline(latlngs, {
-                color: '#0d1117',
-                weight: 9,
-                opacity: 0.8,
-                lineJoin: 'round',
-                lineCap: 'round'
-            }).addTo(map);
-
-            // 2. Linha amarela viva seguindo a geometria exata das ruas
-            polylineRuas = L.polyline(latlngs, {
-                color: '#FFE600',
-                weight: 5.5,
+                color: '#00263d',
+                weight: 10,
                 opacity: 0.95,
-                smoothFactor: 1,
                 lineJoin: 'round',
                 lineCap: 'round'
             }).addTo(map);
 
-            let distKm = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-            document.getElementById('map-route-title').innerText = `⚡ Rota nas Ruas (${rotaAtual.length} paradas)`;
-            document.getElementById('map-route-title').style.color = 'var(--ml-yellow)';
-            document.getElementById('map-route-sub').innerText = `Traçado exato pelas ruas e esquinas`;
-            document.getElementById('map-route-badge').innerText = `${distKm} km`;
-            document.getElementById('map-route-badge').style.color = 'var(--success-glow)';
+            // 2. Linha azul/ciano néon Waze (#00d2ff) seguindo as esquinas e ruas reais!
+            polylineRuas = L.polyline(latlngs, {
+                color: '#00d2ff',
+                weight: 6,
+                opacity: 1.0,
+                smoothFactor: 1.0,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            const titleEl = document.getElementById('waze-route-title');
+            if (titleEl) {
+                titleEl.innerText = isReal ? `⚡ Rota nas Ruas (${rotaAtual.length} paradas)` : `📡 Traçado Offline (${rotaAtual.length} paradas)`;
+                titleEl.style.color = isReal ? '#38bdf8' : '#facc15';
+            }
         }
 
         // -------------------------------------------------------------
@@ -1953,7 +2169,7 @@
             }
 
             // Map Stats
-            const mapEntregasBadge = document.getElementById('map-route-entregas-badge');
+            const mapEntregasBadge = document.getElementById('waze-entregas-badge');
             if (mapEntregasBadge) {
                 mapEntregasBadge.innerText = `${finalizadas}/${total} Entregues`;
             }
@@ -2203,19 +2419,10 @@
             if (bMala) bMala.innerText = `${countMala} paradas`;
         }
 
-        // Custom Leaflet Pin Icon (Verde com Checkmark se entregue!)
-        function criarPinCustomizado(numero, total, isFinalizada) {
-            if (isFinalizada) {
-                return L.divIcon({
-                    className: 'custom-pin-container',
-                    html: `<div class="custom-pin-inner custom-pin-delivered">
-                        <span style="font-size: 12px; font-weight: 900;">✓</span>
-                    </div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 28],
-                    popupAnchor: [0, -28]
-                });
-            }
+        // Custom Leaflet Pin Icon (Estilo Waze com etiqueta da rua!)
+        function criarPinCustomizado(p, numero, total, isFinalizada) {
+            let ruaCurta = (p.endereco || p.destinatario || `Parada #${numero}`).split(',')[0].trim();
+            if (ruaCurta.length > 22) ruaCurta = ruaCurta.substring(0, 20) + '..';
 
             let bg = '#238636'; // Verde Frente
             let textCol = '#fff';
@@ -2229,12 +2436,17 @@
 
             return L.divIcon({
                 className: 'custom-pin-container',
-                html: `<div class="custom-pin-inner" style="background: ${bg}; color: ${textCol};">
-                    <span>${numero}</span>
-                </div>`,
-                iconSize: [26, 26],
-                iconAnchor: [13, 26],
-                popupAnchor: [0, -26]
+                html: `
+                    <div class="waze-pin-wrapper">
+                        <div class="waze-pin-circle ${isFinalizada ? 'delivered' : ''}" style="background: ${bg}; color: ${textCol};">
+                            <span>${isFinalizada ? '✓' : numero}</span>
+                        </div>
+                        <div class="waze-pin-tag">${ruaCurta}</div>
+                    </div>
+                `,
+                iconSize: [120, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -16]
             });
         }
 
@@ -2283,7 +2495,7 @@
                         </div>
                     `;
 
-                    let icon = criarPinCustomizado(i + 1, total, isEntregue);
+                    let icon = criarPinCustomizado(p, i + 1, total, isEntregue);
                     let m = L.marker(pos, { icon: icon }).addTo(map).bindPopup(popupContent);
                     markers.push(m);
                 }

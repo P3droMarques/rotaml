@@ -1163,8 +1163,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson"
 
         try {
-            val client = OkHttpClient()
-            val request = Request.Builder().url(osrmUrl).build()
+            val client = OkHttpClient.Builder()
+                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder()
+                .url(osrmUrl)
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile; RotaML/2.0)")
+                .build()
             val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
             if (response.isSuccessful) {
                 val tripJson = JSONObject(response.body?.string() ?: "{}")
@@ -1206,36 +1212,112 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val url = "https://router.project-osrm.org/route/v1/driving/$coordsList?overview=full&geometries=geojson"
-        val client = OkHttpClient()
-        val request = Request.Builder().url(url).header("User-Agent", "RotaML/1.0").build()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        val routingServers = listOf(
+            "https://routing.openstreetmap.de/routed-car/route/v1/driving/",
+            "https://router.project-osrm.org/route/v1/driving/"
+        )
 
         scope.launch(Dispatchers.IO) {
-            try {
-                val resp = client.newCall(request).execute()
-                if (resp.isSuccessful) {
-                    val respStr = resp.body?.string() ?: "{}"
-                    val json = JSONObject(respStr)
-                    val routes = json.optJSONArray("routes")
-                    if (routes != null && routes.length() > 0) {
-                        val geom = routes.getJSONObject(0).optJSONObject("geometry")
-                        val coords = geom?.optJSONArray("coordinates")
-                        if (coords != null) {
-                            withContext(Dispatchers.Main) {
-                                callback?.invoke(true, coords.toString())
+            // 1. Tentar query completa em servidores com prioridade no openstreetmap.de (rápido e estável)
+            for (baseUrl in routingServers) {
+                try {
+                    val url = "$baseUrl$coordsList?overview=full&geometries=geojson"
+                    val request = Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile; RotaML/2.0)")
+                        .build()
+
+                    val resp = client.newCall(request).execute()
+                    if (resp.isSuccessful) {
+                        val respStr = resp.body?.string() ?: "{}"
+                        val json = JSONObject(respStr)
+                        val routes = json.optJSONArray("routes")
+                        if (routes != null && routes.length() > 0) {
+                            val geom = routes.getJSONObject(0).optJSONObject("geometry")
+                            val coords = geom?.optJSONArray("coordinates")
+                            if (coords != null && coords.length() > 0) {
+                                Log.d("OSRM", "Geometria completa obtida de $baseUrl: ${coords.length()} coordenadas")
+                                withContext(Dispatchers.Main) {
+                                    callback?.invoke(true, coords.toString())
+                                }
+                                return@launch
                             }
-                            return@launch
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w("OSRM", "Tentativa no servidor $baseUrl falhou: ${e.message}")
                 }
-                withContext(Dispatchers.Main) {
-                    callback?.invoke(false, null)
+            }
+
+            // 2. Se a rota inteira falhar, calcula perna a perna (per-leg) para garantir traçado das ruas
+            val pontos = coordsList.split(";").filter { it.isNotBlank() }
+            if (pontos.size >= 2) {
+                try {
+                    val accumulatedCoords = JSONArray()
+                    var anySuccess = false
+
+                    for (i in 0 until pontos.size - 1) {
+                        val legQuery = "${pontos[i]};${pontos[i + 1]}"
+                        var legCoords: JSONArray? = null
+
+                        for (baseUrl in routingServers) {
+                            try {
+                                val url = "$baseUrl$legQuery?overview=full&geometries=geojson"
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile; RotaML/2.0)")
+                                    .build()
+                                val resp = client.newCall(request).execute()
+                                if (resp.isSuccessful) {
+                                    val json = JSONObject(resp.body?.string() ?: "{}")
+                                    val routes = json.optJSONArray("routes")
+                                    if (routes != null && routes.length() > 0) {
+                                        legCoords = routes.getJSONObject(0).optJSONObject("geometry")?.optJSONArray("coordinates")
+                                        if (legCoords != null && legCoords.length() > 0) {
+                                            anySuccess = true
+                                            break
+                                        }
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+
+                        if (legCoords != null && legCoords.length() > 0) {
+                            val startIdx = if (accumulatedCoords.length() > 0) 1 else 0
+                            for (k in startIdx until legCoords.length()) {
+                                accumulatedCoords.put(legCoords.getJSONArray(k))
+                            }
+                        } else {
+                            val p1 = pontos[i].split(",")
+                            val p2 = pontos[i + 1].split(",")
+                            if (p1.size == 2 && p2.size == 2) {
+                                if (accumulatedCoords.length() == 0) {
+                                    accumulatedCoords.put(JSONArray().put(p1[0].toDouble()).put(p1[1].toDouble()))
+                                }
+                                accumulatedCoords.put(JSONArray().put(p2[0].toDouble()).put(p2[1].toDouble()))
+                            }
+                        }
+                    }
+
+                    if (anySuccess && accumulatedCoords.length() > 0) {
+                        Log.d("OSRM", "Geometria segmentada gerada: ${accumulatedCoords.length()} pontos")
+                        withContext(Dispatchers.Main) {
+                            callback?.invoke(true, accumulatedCoords.toString())
+                        }
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    Log.e("OSRM", "Erro na reconstrução per-leg", e)
                 }
-            } catch (e: Exception) {
-                Log.e("OSRM", "Erro ao buscar geometria das ruas", e)
-                withContext(Dispatchers.Main) {
-                    callback?.invoke(false, null)
-                }
+            }
+
+            withContext(Dispatchers.Main) {
+                callback?.invoke(false, null)
             }
         }
     }
