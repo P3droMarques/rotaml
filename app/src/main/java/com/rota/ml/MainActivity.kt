@@ -160,12 +160,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun solicitarAtivacaoAcessibilidade() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("⚙️ Ativar Serviço de Leitura")
-            .setMessage("Para capturar paradas da tela do Mercado Envios Extra automaticamente, ative o serviço 'Leitor Envios Extra' em Acessibilidade.")
-            .setPositiveButton("Abrir Configurações") { _, _ ->
+            .setTitle("⚙️ Ativar Leitor no Xiaomi / POCO")
+            .setMessage("No POCO/Xiaomi (HyperOS/MIUI):\n\n1. Toque em 'Acessibilidade' > 'Apps baixados' e ative 'Leitor Envios Extra'.\n\n⚠️ Se o sistema bloquear dizendo 'Configuração restrita':\nToque em 'Liberar no Xiaomi' abaixo > toque nos 3 pontinhos no canto superior direito (⋮) > selecione 'Permitir configurações restritas'.")
+            .setPositiveButton("Acessibilidade") { _, _ ->
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNeutralButton("Liberar no Xiaomi (Info do App)") { _, _ ->
                 try {
-                    requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
                 } catch (_: Exception) {}
             }
             .setNegativeButton("Fechar", null)
