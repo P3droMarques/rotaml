@@ -2,8 +2,6 @@ package com.rota.ml
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -20,9 +18,10 @@ import android.util.Log
 import android.view.View
 import android.webkit.*
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.dialog.MaterialDialogs
+import com.google.android.material.dialog.MaterialAlertDialogBuilder as AlertDialogBuilder
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.rota.ml.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
@@ -31,9 +30,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
 import java.util.*
-import java.util.regex.Pattern
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
@@ -52,11 +49,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         setupUI()
         setupListeners()
+        setupLeitorListener()
+
+        if (intent?.getBooleanExtra("EXTRA_PROCESSAR_AUTOMATICO", false) == true) {
+            processarRota()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.getBooleanExtra("EXTRA_PROCESSAR_AUTOMATICO", false) == true) {
+            processarRota()
+        }
     }
 
     override fun onResume() {
         super.onResume()
         atualizarStatusAcessibilidade()
+        atualizarBotaoLeitor()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -97,14 +108,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         binding.chipAcessibilidade.setOnClickListener {
-            Toast.makeText(this, "Ative o serviço 'Leitor Envios Extra' nas configurações", Toast.LENGTH_LONG).show()
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
+            solicitarAtivacaoAcessibilidade()
+        }
+    }
+
+    private fun setupLeitorListener() {
+        LeitorEnviosService.onUpdateListener = { _, totalParadas ->
+            runOnUiThread {
+                if (LeitorEnviosService.capturando) {
+                    binding.btnLer.text = "⏹ Lendo ($totalParadas)..."
+                    binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
+                } else {
+                    binding.btnLer.text = if (totalParadas > 0) "1. Ler Tela ($totalParadas)" else "1. Ler Tela"
+                    binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
+                }
+            }
         }
     }
 
     private fun atualizarStatusAcessibilidade() {
-        val enabled = isAccessibilityServiceEnabled()
+        val enabled = isAccessibilityServiceEnabled() || LeitorEnviosService.isRunning
         if (enabled) {
             binding.chipAcessibilidade.text = "● Leitor Ativo"
             binding.chipAcessibilidade.setTextColor(Color.parseColor("#10B981"))
@@ -114,7 +137,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun atualizarBotaoLeitor() {
+        val totalParadas = LeitorEnviosService.paradasDetectadas.size
+        if (LeitorEnviosService.capturando) {
+            binding.btnLer.text = "⏹ Lendo ($totalParadas)..."
+            binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
+        } else {
+            binding.btnLer.text = if (totalParadas > 0) "1. Ler Tela ($totalParadas)" else "1. Ler Tela"
+            binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
+        }
+    }
+
     private fun isAccessibilityServiceEnabled(): Boolean {
+        if (LeitorEnviosService.isRunning) return true
         val expectedServiceName = "${packageName}/${LeitorEnviosService::class.java.canonicalName}"
         val enabledServices = Settings.Secure.getString(
             contentResolver,
@@ -123,18 +158,42 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         return enabledServices.contains(expectedServiceName) || enabledServices.contains(LeitorEnviosService::class.java.simpleName)
     }
 
+    private fun solicitarAtivacaoAcessibilidade() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("⚙️ Ativar Serviço de Leitura")
+            .setMessage("Para capturar paradas da tela do Mercado Envios Extra automaticamente, ative o serviço 'Leitor Envios Extra' em Acessibilidade.")
+            .setPositiveButton("Abrir Configurações") { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                try {
+                    requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
+                } catch (_: Exception) {}
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
+
     private fun toggleCaptura() {
-        LeitorEnviosService.capturando = !LeitorEnviosService.capturando
-        if (LeitorEnviosService.capturando) {
-            LeitorEnviosService.limpar()
-            binding.btnLer.text = "⏹ Lendo..."
+        if (!isAccessibilityServiceEnabled()) {
+            solicitarAtivacaoAcessibilidade()
+            return
+        }
+
+        if (!LeitorEnviosService.capturando) {
+            LeitorEnviosService.instance?.iniciarCapturaComOverlay() ?: run {
+                LeitorEnviosService.capturando = true
+                LeitorEnviosService.limpar()
+            }
+            binding.btnLer.text = "⏹ Lendo (0)..."
             binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
-            Toast.makeText(this, "Vá para o app Envios Extra e role a lista de paradas!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Vá para o app Envios Extra e role a lista de paradas!\nO botão flutuante amarelo mostrará a contagem.", Toast.LENGTH_LONG).show()
         } else {
-            val total = LeitorEnviosService.textosCapturados.size
-            binding.btnLer.text = "1. Ler Tela ($total)"
+            LeitorEnviosService.instance?.pararCapturaEFecharOverlay() ?: run {
+                LeitorEnviosService.capturando = false
+            }
+            val total = LeitorEnviosService.paradasDetectadas.size
+            binding.btnLer.text = if (total > 0) "1. Ler Tela ($total)" else "1. Ler Tela"
             binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
-            Toast.makeText(this, "Captura encerrada: $total itens capturados", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Captura concluída: $total paradas identificadas!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -154,10 +213,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun carregarRotaTeste() {
-        binding.webView.post {
-            binding.webView.evaluateJavascript("carregar40ParadasCampinas(true)", null)
-        }
-        Toast.makeText(this, "40 Paradas de Campinas carregadas com sucesso!", Toast.LENGTH_SHORT).show()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("🧪 Escolha a Rota de Teste")
+            .setItems(arrayOf(
+                "⚡ Suas 11 Paradas Envios Extra (Foto Real - 62 Unidades)",
+                "📦 Rota Completa com 40 Paradas em Campinas"
+            )) { _, which ->
+                if (which == 0) {
+                    binding.webView.post {
+                        binding.webView.evaluateJavascript("carregar11ParadasEnviosExtra(true)", null)
+                    }
+                    Toast.makeText(this, "11 Paradas dos Envios Extra carregadas!", Toast.LENGTH_SHORT).show()
+                } else {
+                    binding.webView.post {
+                        binding.webView.evaluateJavascript("carregar40ParadasCampinas(true)", null)
+                    }
+                    Toast.makeText(this, "40 Paradas em Campinas carregadas!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun showConfigDialog() {
@@ -195,42 +270,58 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun processarRota() {
         scope.launch {
+            val paradasProntas = synchronized(LeitorEnviosService.paradasDetectadas) {
+                LeitorEnviosService.paradasDetectadas.toList()
+            }
             val rawTextList = LeitorEnviosService.textosCapturados.toList()
-            if (rawTextList.isEmpty()) {
+
+            if (paradasProntas.isEmpty() && rawTextList.isEmpty()) {
                 MaterialAlertDialogBuilder(this@MainActivity)
-                    .setTitle("🎯 Teste com 40 Paradas em Campinas")
-                    .setMessage("Nenhum dado capturado ainda da tela do app Envios Extra.\n\nDeseja carregar a rota de teste com 40 paradas da região de Campinas (incluindo o pacote da sua foto) para ver a otimização no mapa?")
-                    .setPositiveButton("Carregar 40 Paradas") { _, _ -> carregarRotaTeste() }
+                    .setTitle("📍 Nenhuma Parada Lida Ainda")
+                    .setMessage("Ainda não foram detectados dados na tela do Mercado Envios Extra.\n\nComo usar:\n1. Toque em '1. Ler Tela'\n2. Abra o app Envios Extra e role a lista de paradas devagar\n3. Toque em 'Gerar Rota ✅' no botão flutuante amarelo!\n\nDeseja carregar as 11 paradas dos seus prints agora para ver o trajeto no mapa?")
+                    .setPositiveButton("Carregar Rota dos Prints") { _, _ ->
+                        binding.webView.post {
+                            binding.webView.evaluateJavascript("carregar11ParadasEnviosExtra(true)", null)
+                        }
+                    }
                     .setNegativeButton("Entendido", null)
                     .show()
                 return@launch
             }
 
             binding.progressBar.visibility = View.VISIBLE
-            Toast.makeText(this@MainActivity, "Processando dados com IA...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@MainActivity, "Processando paradas e calculando rota...", Toast.LENGTH_SHORT).show()
 
-            val rawText = rawTextList.joinToString("\n")
-            var paradasJsonArray: JSONArray? = null
+            var paradasJsonArray = JSONArray()
 
-            // 1. Tentar extração inteligente via Gemini
-            val geminiResult = callGeminiWithFailover(rawText)
-            if (geminiResult != null) {
-                try {
-                    paradasJsonArray = JSONArray(geminiResult)
-                } catch (e: Exception) {
-                    Log.e("GeminiParse", "Erro ao parsear JSON do Gemini", e)
+            // 1. Extração em tempo real já estruturada pelo LeitorEnviosService
+            if (paradasProntas.isNotEmpty()) {
+                for (p in paradasProntas) {
+                    paradasJsonArray.put(p.toJson())
+                }
+            } else if (rawTextList.isNotEmpty()) {
+                // 2. Parser local inteligente
+                val parsed = EnviosExtraParser.parseLinhas(rawTextList)
+                for (p in parsed) {
+                    paradasJsonArray.put(p.toJson())
                 }
             }
 
-            // 2. Se Gemini falhou ou não há chave configurada, usa parser local de emergência
-            if (paradasJsonArray == null || paradasJsonArray.length() == 0) {
-                Log.d("RotaML", "Gemini indisponível ou vazio. Usando parser local...")
-                paradasJsonArray = extrairParadasLocalmente(rawTextList)
+            // 3. Fallback Gemini se configurado
+            if (paradasJsonArray.length() == 0 && rawTextList.isNotEmpty()) {
+                val geminiResult = callGeminiWithFailover(rawTextList.joinToString("\n"))
+                if (geminiResult != null) {
+                    try {
+                        paradasJsonArray = JSONArray(geminiResult)
+                    } catch (e: Exception) {
+                        Log.e("GeminiParse", "Erro ao parsear JSON do Gemini", e)
+                    }
+                }
             }
 
             if (paradasJsonArray.length() == 0) {
                 binding.progressBar.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Não foi possível identificar endereços no texto capturado.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Não foi possível identificar endereços no texto. Role a tela do app Envios Extra devagar e tente novamente.", Toast.LENGTH_LONG).show()
                 return@launch
             }
 
@@ -256,17 +347,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         [
           {
             "parada_num": 1,
-            "destinatario": "Nome do Cliente",
+            "destinatario": "Nome ou Local",
             "endereco": "Rua/Avenida e Número",
             "bairro": "Nome do Bairro",
-            "cidade": "Cidade",
+            "cidade": "Campinas",
             "cep": "00000000",
-            "complemento": "Fundos, Apto, etc ou vazio",
+            "complemento": "Condomínio, Apto, etc",
             "pacotes": [
               {
-                "id": "48314806075",
-                "final": "06075",
-                "etiqueta": "#NX394_21",
+                "id": "NX215_1",
+                "final": "215_1",
+                "etiqueta": "#NX215_1",
                 "ponto": "A"
               }
             ]
@@ -298,79 +389,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         return null
     }
 
-    // Extrator local heurístico caso o Gemini não tenha chave ou falhe
-    private fun extrairParadasLocalmente(linhas: List<String>): JSONArray {
-        val paradas = JSONArray()
-        val cepRegex = Pattern.compile("\\b(\\d{5}-?\\d{3})\\b")
-        val idRegex = Pattern.compile("\\b(48\\d{8,10}|\\d{10,12})\\b")
-        val etiquetaRegex = Pattern.compile("#?([A-Z]{2}\\d{3}_\\d+)")
-
-        var enderecoAtual = ""
-        var destinatarioAtual = ""
-        var cepAtual = ""
-        val pacotesAtuais = mutableListOf<JSONObject>()
-
-        for (linha in linhas) {
-            val l = linha.trim()
-            val mCep = cepRegex.matcher(l)
-            val mId = idRegex.matcher(l)
-            val mEtiqueta = etiquetaRegex.matcher(l)
-
-            if (mId.find()) {
-                val id = mId.group(1) ?: ""
-                val pkg = JSONObject().apply {
-                    put("id", id)
-                    put("final", if (id.length >= 5) id.takeLast(5) else id)
-                    put("conferido", false)
-                }
-                pacotesAtuais.add(pkg)
-            } else if (mEtiqueta.find()) {
-                val etq = mEtiqueta.group(1) ?: ""
-                if (pacotesAtuais.isNotEmpty()) {
-                    pacotesAtuais.last().put("etiqueta", "#$etq")
-                }
-            } else if (mCep.find()) {
-                cepAtual = mCep.group(1)?.replace("-", "") ?: ""
-            } else if (l.startsWith("Rua", true) || l.startsWith("Av", true) || l.startsWith("R.", true) || l.startsWith("Alameda", true)) {
-                if (enderecoAtual.isNotBlank() && pacotesAtuais.isNotEmpty()) {
-                    // Salva parada anterior
-                    val p = JSONObject().apply {
-                        put("parada_num", paradas.length() + 1)
-                        put("destinatario", if (destinatarioAtual.isNotBlank()) destinatarioAtual else "Cliente ${paradas.length() + 1}")
-                        put("endereco", enderecoAtual)
-                        put("bairro", "")
-                        put("cidade", "Campinas")
-                        put("cep", cepAtual)
-                        put("pacotes", JSONArray(pacotesAtuais))
-                    }
-                    paradas.put(p)
-                    pacotesAtuais.clear()
-                    destinatarioAtual = ""
-                    cepAtual = ""
-                }
-                enderecoAtual = l
-            } else if (enderecoAtual.isBlank() && l.length > 5 && !l.contains("Mercado") && !l.contains("Envios")) {
-                destinatarioAtual = l
-            }
-        }
-
-        // Adiciona última parada
-        if (enderecoAtual.isNotBlank()) {
-            val p = JSONObject().apply {
-                put("parada_num", paradas.length() + 1)
-                put("destinatario", if (destinatarioAtual.isNotBlank()) destinatarioAtual else "Cliente ${paradas.length() + 1}")
-                put("endereco", enderecoAtual)
-                put("bairro", "")
-                put("cidade", "Campinas")
-                put("cep", cepAtual)
-                put("pacotes", JSONArray(pacotesAtuais))
-            }
-            paradas.put(p)
-        }
-
-        return paradas
-    }
-
     @Suppress("DEPRECATION")
     private suspend fun geocoderAndRoute(paradas: JSONArray) {
         val geocoder = Geocoder(this, Locale.getDefault())
@@ -378,29 +396,44 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         for (i in 0 until paradas.length()) {
             val p = paradas.getJSONObject(i)
-            val addr = "${p.optString("endereco", "")}, ${p.optString("bairro", "")}, ${p.optString("cidade", "Campinas")}, SP, Brasil"
+            val endereco = p.optString("endereco", "")
+            val bairro = p.optString("bairro", "")
+            val cep = p.optString("cep", "")
+
+            val queryPrincipal = if (cep.isNotBlank()) {
+                "$endereco, $cep, Campinas - SP, Brasil"
+            } else if (bairro.isNotBlank()) {
+                "$endereco, $bairro, Campinas - SP, Brasil"
+            } else {
+                "$endereco, Campinas - SP, Brasil"
+            }
+
             try {
-                val results = withContext(Dispatchers.IO) { geocoder.getFromLocationName(addr, 1) }
+                var results = withContext(Dispatchers.IO) { geocoder.getFromLocationName(queryPrincipal, 1) }
+                if (results.isNullOrEmpty() && cep.isNotBlank()) {
+                    results = withContext(Dispatchers.IO) { geocoder.getFromLocationName("$endereco, Campinas - SP", 1) }
+                }
+
                 if (!results.isNullOrEmpty()) {
                     p.put("lat", results[0].latitude)
                     p.put("lng", results[0].longitude)
                 } else {
-                    // Fallback aproximado se não achar no geocoder
-                    p.put("lat", -22.9056 + (i * 0.005))
-                    p.put("lng", -47.0608 + (i * 0.005))
+                    // Fallback geográfico realista na região de Campinas (Taquaral/Guanabara)
+                    p.put("lat", -22.8850 + (i * 0.003))
+                    p.put("lng", -47.0580 + (i * 0.003))
                 }
                 points.add(p)
             } catch (e: Exception) {
-                Log.e("Geocode", "Fail addr: $addr", e)
-                p.put("lat", -22.9056 + (i * 0.005))
-                p.put("lng", -47.0608 + (i * 0.005))
+                Log.e("Geocode", "Fail addr: $queryPrincipal", e)
+                p.put("lat", -22.8850 + (i * 0.003))
+                p.put("lng", -47.0580 + (i * 0.003))
                 points.add(p)
             }
         }
 
         if (points.isEmpty()) return
 
-        // OSRM Trip API para ordenar a rota
+        // OSRM Trip API para ordenar a rota no menor trajeto
         val coords = points.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
         val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson"
 
@@ -434,7 +467,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             Log.e("OSRM", "Error", e)
         }
 
-        // Se o OSRM der erro de rede, carrega os pontos na ordem original
+        // Se o OSRM der erro de rede, o JavaScript da webview aplica o algoritmo 2-Opt local
         val fallbackPoints = JSONArray()
         for (p in points) fallbackPoints.put(p)
         binding.webView.post {

@@ -702,17 +702,41 @@
             </div>
         </div>
 
-        <!-- TAB 5: SIMULADOR & TESTES (40 PARADAS CAMPINAS) -->
+        <!-- TAB 5: SIMULADOR & TESTES -->
         <div id="tab-teste" class="tab-content">
-            <!-- 40 Stops Campinas Hero Button -->
-            <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #161b22, #1c2333);">
+            <!-- 11 Stops Envios Extra Real Photo Button -->
+            <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1f2619, #161b22); margin-bottom: 12px;">
                 <div class="card-header">
                     <span class="card-title" style="color: var(--ml-yellow);">
-                        🎯 Rota de Teste: 40 Paradas em Campinas
+                        ⚡ Suas 11 Paradas dos Envios Extra (Foto Real)
                     </span>
                 </div>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-                    Simula exatamente a leitura da tela de uma gaiola completa em Campinas (região do <b>Jd. Ipiranga, Campos Elíseos, Parque Industrial, Centro e Taquaral</b>), incluindo o pacote real da foto enviada (<b>Valdineia Mendes, Rua Umberto Vetoratto, 170</b>).
+                    Carrega exatamente a tela dos seus prints: <b>11 paradas, 62 unidades no veículo</b> (Guanabara, Taquaral e Cambuí: Dona Maria Umbelina Couto, Tiradentes, Alberto Cerqueira Lima, etc.).
+                </p>
+
+                <button class="test-btn primary" onclick="carregar11ParadasEnviosExtra(true)" style="background: rgba(255, 230, 0, 0.2); border-color: var(--ml-yellow);">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
+                            🚀 Carregar as 11 Paradas da sua Foto (Otimizadas no Mapa)
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted);">
+                            62 unidades no veículo organizadas por zonas do carro e menor percurso
+                        </div>
+                    </div>
+                    <span style="font-size: 18px;">▶</span>
+                </button>
+            </div>
+
+            <!-- 40 Stops Campinas Hero Button -->
+            <div class="card" style="border: 1px solid var(--border); background: linear-gradient(145deg, #161b22, #1c2333);">
+                <div class="card-header">
+                    <span class="card-title" style="color: var(--ml-blue-hover);">
+                        🎯 Rota Alternativa: 40 Paradas em Campinas
+                    </span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+                    Simula a leitura de uma gaiola completa em Campinas (região do <b>Jd. Ipiranga, Campos Elíseos, Parque Industrial, Centro e Taquaral</b>).
                 </p>
 
                 <!-- Button 1: Load 40 stops raw -->
@@ -1089,13 +1113,16 @@
         }
 
         // -------------------------------------------------------------
-        // SMART PACKAGE MATCHER
+        // SMART PACKAGE MATCHER COM SUPORTE A MÚLTIPLAS UNIDADES
         // -------------------------------------------------------------
         function localizarPacoteERota(codigoBipado) {
             let limpo = codigoBipado.trim();
             let urlMatch = limpo.match(/(\d{10,12})/);
             let idExtraido = urlMatch ? urlMatch[1] : limpo;
 
+            let firstConferidoMatch = null;
+
+            // 1ª passada: Busca pacote ainda pendente (!pkg.conferido)
             for (let i = 0; i < rotaAtual.length; i++) {
                 let parada = rotaAtual[i];
                 if (!parada.pacotes) continue;
@@ -1104,24 +1131,39 @@
                     let pkg = parada.pacotes[j];
                     let idPkg = (pkg.id || '').toString();
                     let finalPkg = (pkg.final || '').toString();
-                    let etiquetaPkg = (pkg.etiqueta || '').replace('#', '').toLowerCase();
-                    let limpoLower = limpo.replace('#', '').toLowerCase();
+                    let etiquetaPkg = (pkg.etiqueta || '').replace(/#/g, '').toLowerCase();
+                    let limpoLower = limpo.replace(/#/g, '').toLowerCase();
 
-                    if (idPkg === limpo || idPkg === idExtraido ||
+                    let isMatch = (idPkg === limpo || idPkg === idExtraido ||
                         (finalPkg && limpo.endsWith(finalPkg)) ||
                         (finalPkg && idExtraido.endsWith(finalPkg)) ||
-                        (etiquetaPkg && limpoLower.includes(etiquetaPkg)) ||
-                        (idPkg && limpo.includes(idPkg))) {
-                        return {
-                            paradaIndex: i,
-                            parada: parada,
-                            pacoteIndex: j,
-                            pacote: pkg
-                        };
+                        (etiquetaPkg && (limpoLower.includes(etiquetaPkg) || etiquetaPkg.includes(limpoLower))) ||
+                        (idPkg && limpo.includes(idPkg)));
+
+                    if (isMatch) {
+                        if (!pkg.conferido) {
+                            return {
+                                paradaIndex: i,
+                                parada: parada,
+                                pacoteIndex: j,
+                                pacote: pkg,
+                                isDuplicado: false
+                            };
+                        } else if (!firstConferidoMatch) {
+                            firstConferidoMatch = {
+                                paradaIndex: i,
+                                parada: parada,
+                                pacoteIndex: j,
+                                pacote: pkg,
+                                isDuplicado: true
+                            };
+                        }
                     }
                 }
             }
-            return null;
+
+            // Se todos os pacotes correspondentes já foram conferidos, retorna como duplicado
+            return firstConferidoMatch;
         }
 
         // Bipe Confirmation Handler
@@ -1130,22 +1172,6 @@
             code = code.toString().trim();
             const resultBox = document.getElementById('bipe-result');
             resultBox.style.display = 'block';
-
-            // Check Duplicate
-            if (pacotesBipados.has(code)) {
-                resultBox.className = 'bipe-result-card warning';
-                document.getElementById('bipe-res-stop').innerText = "ATENÇÃO!";
-                document.getElementById('bipe-res-zone').innerText = "DUPLICADO";
-                document.getElementById('bipe-res-zone').className = "zone-pill zone-meio";
-                document.getElementById('bipe-res-recipient').innerText = "Pacote Já Bipado Anteriormente!";
-                document.getElementById('bipe-res-address').innerText = `Código: ${code}`;
-                document.getElementById('bipe-res-packages-list').innerHTML = `Esse pacote já foi conferido e guardado no carro.`;
-                document.getElementById('bipe-res-alert').innerText = "⚠️ Não conte este pacote duas vezes!";
-                
-                if (window.Android && window.Android.speak) window.Android.speak("Atenção: Pacote duplicado!");
-                if (window.Android && window.Android.vibrar) window.Android.vibrar("warning");
-                return;
-            }
 
             const match = localizarPacoteERota(code);
 
@@ -1165,9 +1191,24 @@
                 return;
             }
 
+            if (match.isDuplicado) {
+                resultBox.className = 'bipe-result-card warning';
+                document.getElementById('bipe-res-stop').innerText = "ATENÇÃO!";
+                document.getElementById('bipe-res-zone').innerText = "DUPLICADO";
+                document.getElementById('bipe-res-zone').className = "zone-pill zone-meio";
+                document.getElementById('bipe-res-recipient').innerText = "Todos os pacotes desta etiqueta já foram bipados!";
+                document.getElementById('bipe-res-address').innerText = `Parada #${match.paradaIndex + 1}: ${match.parada.endereco}`;
+                document.getElementById('bipe-res-packages-list').innerHTML = `Todos os ${match.parada.pacotes.length} pacotes já foram conferidos e guardados no carro.`;
+                document.getElementById('bipe-res-alert').innerText = "⚠️ Não conte este pacote duas vezes!";
+                
+                if (window.Android && window.Android.speak) window.Android.speak("Atenção: Todos os pacotes desta parada já foram conferidos!");
+                if (window.Android && window.Android.vibrar) window.Android.vibrar("warning");
+                return;
+            }
+
             // Sucesso!
             const { paradaIndex, parada, pacoteIndex, pacote } = match;
-            pacotesBipados.add(code);
+            pacotesBipados.add(pacote.id);
             pacote.conferido = true;
 
             let totalParadas = rotaAtual.length;
@@ -1504,6 +1545,216 @@
                 }
 
                 map.fitBounds(L.latLngBounds(latlngs), { padding: [35, 35] });
+            }
+        }
+
+        // -------------------------------------------------------------
+        // DATASET REAL: 11 PARADAS DO ENVIOS EXTRA (FOTOS DO MOTORISTA)
+        // 62 Unidades no veículo, 11 paradas em Campinas (Guanabara/Taquaral/Cambuí)
+        // -------------------------------------------------------------
+        function obter11ParadasEnviosExtra() {
+            return [
+                {
+                    parada_num: 1,
+                    destinatario: "Loja Academia Aquarius",
+                    endereco: "Rua Dona Maria Umbelina Couto 189",
+                    complemento: "Com horário comercial",
+                    bairro: "Guanabara",
+                    cidade: "Campinas",
+                    cep: "13076011",
+                    lat: -22.8872,
+                    lng: -47.0658,
+                    pacotes: [
+                        { id: "NX215_1", final: "215_1", etiqueta: "#NX215_1", conferido: false }
+                    ]
+                },
+                {
+                    parada_num: 2,
+                    destinatario: "Condomínio Residencial Parque Itaici",
+                    endereco: "Rua Tiradentes 1025",
+                    complemento: "",
+                    bairro: "Guanabara",
+                    cidade: "Campinas",
+                    cep: "13023191",
+                    lat: -22.8912,
+                    lng: -47.0664,
+                    pacotes: Array.from({ length: 8 }, (_, i) => ({
+                        id: `NX215_2_${i + 1}`,
+                        final: "215_2",
+                        etiqueta: `#NX215_2 (${i + 1}/8)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 3,
+                    destinatario: "Condomínio Vox Residencial",
+                    endereco: "Rua Alberto Cerqueira Lima 29",
+                    complemento: "",
+                    bairro: "Taquaral",
+                    cidade: "Campinas",
+                    cep: "13076010",
+                    lat: -22.8821,
+                    lng: -47.0573,
+                    pacotes: Array.from({ length: 17 }, (_, i) => ({
+                        id: `NX215_3_${i + 1}`,
+                        final: "215_3",
+                        etiqueta: `#NX215_3 (${i + 1}/17)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 4,
+                    destinatario: "Cliente Taquaral",
+                    endereco: "Rua Lotário Novaes 325",
+                    complemento: "",
+                    bairro: "Taquaral",
+                    cidade: "Campinas",
+                    cep: "13076150",
+                    lat: -22.8804,
+                    lng: -47.0601,
+                    pacotes: Array.from({ length: 2 }, (_, i) => ({
+                        id: `NX215_4_${i + 1}`,
+                        final: "215_4",
+                        etiqueta: `#NX215_4 (${i + 1}/2)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 5,
+                    destinatario: "Condomínio Art Vitta",
+                    endereco: "Rua Doutor Mário Natividade 1080",
+                    complemento: "",
+                    bairro: "Taquaral",
+                    cidade: "Campinas",
+                    cep: "13076112",
+                    lat: -22.8842,
+                    lng: -47.0544,
+                    pacotes: Array.from({ length: 9 }, (_, i) => ({
+                        id: `NX215_5_${i + 1}`,
+                        final: "215_5",
+                        etiqueta: `#NX215_5 (${i + 1}/9)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 6,
+                    destinatario: "Comércio Guanabara",
+                    endereco: "Av. Barão de Itapura 2200",
+                    complemento: "Comércio",
+                    bairro: "Guanabara",
+                    cidade: "Campinas",
+                    cep: "13020432",
+                    lat: -22.8890,
+                    lng: -47.0630,
+                    pacotes: Array.from({ length: 11 }, (_, i) => ({
+                        id: `NX215_6_${i + 1}`,
+                        final: "215_6",
+                        etiqueta: `#NX215_6 (${i + 1}/11)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 7,
+                    destinatario: "Condomínio Horizon Residence Premium",
+                    endereco: "Rua São Salvador 220",
+                    complemento: "",
+                    bairro: "Taquaral",
+                    cidade: "Campinas",
+                    cep: "13076904",
+                    lat: -22.8835,
+                    lng: -47.0562,
+                    pacotes: Array.from({ length: 7 }, (_, i) => ({
+                        id: `NX215_7_${i + 1}`,
+                        final: "215_7",
+                        etiqueta: `#NX215_7 (${i + 1}/7)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 8,
+                    destinatario: "Prédio Aquarius I",
+                    endereco: "Rua Doutor Plínio Barreto 107",
+                    complemento: "",
+                    bairro: "Guanabara",
+                    cidade: "Campinas",
+                    cep: "13076590",
+                    lat: -22.8856,
+                    lng: -47.0618,
+                    pacotes: Array.from({ length: 5 }, (_, i) => ({
+                        id: `NX215_8_${i + 1}`,
+                        final: "215_8",
+                        etiqueta: `#NX215_8 (${i + 1}/5)`,
+                        conferido: false
+                    }))
+                },
+                {
+                    parada_num: 9,
+                    destinatario: "Residencial Vila Nova",
+                    endereco: "Rua Carolina Florence 950",
+                    complemento: "",
+                    bairro: "Vila Nova",
+                    cidade: "Campinas",
+                    cep: "13073076",
+                    lat: -22.8792,
+                    lng: -47.0728,
+                    pacotes: [
+                        { id: "NX215_9", final: "215_9", etiqueta: "#NX215_9", conferido: false }
+                    ]
+                },
+                {
+                    parada_num: 10,
+                    destinatario: "Cliente Vila Iza",
+                    endereco: "Rua Paulo José Vilac 128",
+                    complemento: "",
+                    bairro: "Vila Iza",
+                    cidade: "Campinas",
+                    cep: "13076690",
+                    lat: -22.8848,
+                    lng: -47.0588,
+                    pacotes: [
+                        { id: "NX215_10", final: "215_10", etiqueta: "#NX215_10", conferido: false }
+                    ]
+                },
+                {
+                    parada_num: 11,
+                    destinatario: "Prédio Sesmarias",
+                    endereco: "Avenida José de Sousa Campos 2303",
+                    complemento: "",
+                    bairro: "Cambuí",
+                    cidade: "Campinas",
+                    cep: "13025320",
+                    lat: -22.8953,
+                    lng: -47.0487,
+                    pacotes: [
+                        { id: "NX215_11", final: "215_11", etiqueta: "#NX215_11", conferido: false }
+                    ]
+                }
+            ];
+        }
+
+        function carregar11ParadasEnviosExtra(otimizarAutomatico) {
+            rotaBrutaOriginal = obter11ParadasEnviosExtra();
+            if (otimizarAutomatico) {
+                rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
+                isRotaOtimizada = true;
+            } else {
+                rotaAtual = rotaBrutaOriginal.map(p => ({ ...p }));
+                isRotaOtimizada = false;
+            }
+
+            pacotesBipados.clear();
+            historicoBipes = [];
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3]);
+            renderizarMapa();
+
+            let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
+            showToast(`11 paradas dos Envios Extra carregadas (62 pacotes no carro)!`);
+            if (window.Android && window.Android.speak) {
+                window.Android.speak(`11 paradas do percurso carregadas. 62 pacotes no veículo.`);
             }
         }
 
