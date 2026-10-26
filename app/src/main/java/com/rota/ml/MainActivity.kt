@@ -437,6 +437,191 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    fun firebaseListarRotas(callback: ((Boolean, String, String?) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) {
+            callback?.invoke(false, "Configure a URL do Firebase nas configurações ⚙️", null)
+            return
+        }
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala.json$authParam"
+
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).get().build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    val respStr = resp.body?.string() ?: "{}"
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(true, "Rotas carregadas da nuvem", respStr)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(false, "Erro Firebase (${resp.code}): ${resp.message}", null)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao listar rotas", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, "Falha ao conectar ao Firebase: ${e.message}", null)
+                }
+            }
+        }
+    }
+
+    fun firebaseSalvarRota(rotaId: String, rotaJsonStr: String, callback: ((Boolean, String) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) {
+            callback?.invoke(false, "Configure a URL do Firebase nas configurações ⚙️")
+            return
+        }
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/$rotaId.json$authParam"
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .put(rotaJsonStr.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(true, "☁️ Rota salva automaticamente no Firebase!")
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(false, "Erro Firebase (${resp.code}): ${resp.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao salvar rota", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, "Falha ao conectar ao Firebase: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun firebaseExcluirRota(rotaId: String, callback: ((Boolean, String) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) {
+            callback?.invoke(false, "Configure a URL do Firebase")
+            return
+        }
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/$rotaId.json$authParam"
+
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).delete().build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(true, "🗑️ Rota excluída do Firebase com sucesso!")
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(false, "Erro ao excluir (${resp.code}): ${resp.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao excluir rota", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, "Falha de rede ao excluir: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun firebaseAtualizarStatusParada(rotaId: String, paradaIndex: Int, finalizada: Boolean, finalizadaEm: String, callback: ((Boolean, String) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) return
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/$rotaId/paradas/$paradaIndex.json$authParam"
+
+        val patchBody = JSONObject().apply {
+            put("finalizada", finalizada)
+            put("finalizadaEm", finalizadaEm)
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .patch(patchBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(true, "Status da parada sincronizado no Firebase")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao atualizar parada", e)
+            }
+        }
+    }
+
+    fun firebaseFinalizarRota(rotaId: String, status: String, callback: ((Boolean, String) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) return
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/$rotaId.json$authParam"
+
+        val patchBody = JSONObject().apply {
+            put("status", status)
+            put("atualizado_em", System.currentTimeMillis())
+            if (status == "finalizada") {
+                put("finalizada_em", System.currentTimeMillis())
+                put("finalizada_em_str", SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date()))
+            }
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .patch(patchBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        val msg = if (status == "finalizada") "🏁 Rota finalizada e sincronizada na nuvem!" else "🔄 Rota reaberta na nuvem!"
+                        callback?.invoke(true, msg)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao finalizar rota", e)
+            }
+        }
+    }
+
     fun salvarRotaNoFirebase(rotaJsonStr: String, callback: ((Boolean, String) -> Unit)? = null) {
         val baseUrl = getFirebaseBaseUrl()
         if (baseUrl.isBlank()) {
@@ -985,6 +1170,56 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         fun abrirConfiguracoes() {
             runOnUiThread {
                 showConfigDialog()
+            }
+        }
+
+        @JavascriptInterface
+        fun listarRotasNuvem() {
+            firebaseListarRotas { success, msg, data ->
+                runOnUiThread {
+                    val safeData = if (success && data != null && data != "null" && data.isNotBlank()) data else "{}"
+                    binding.webView.evaluateJavascript("if (window.receberListaRotasFirebase) window.receberListaRotasFirebase($safeData, $success, '${msg.replace("'", "\\'")}');", null)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun salvarRotaAuto(rotaId: String, rotaJsonStr: String) {
+            firebaseSalvarRota(rotaId, rotaJsonStr) { success, msg ->
+                runOnUiThread {
+                    if (success) {
+                        binding.webView.evaluateJavascript("if (window.onRotaSalvaAuto) window.onRotaSalvaAuto('$rotaId', true);", null)
+                    } else {
+                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun excluirRotaNuvem(rotaId: String) {
+            firebaseExcluirRota(rotaId) { _, msg ->
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                    binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
+                    listarRotasNuvem()
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun atualizarStatusParadaNuvem(rotaId: String, paradaIndex: Int, finalizada: Boolean, finalizadaEm: String) {
+            firebaseAtualizarStatusParada(rotaId, paradaIndex, finalizada, finalizadaEm)
+        }
+
+        @JavascriptInterface
+        fun finalizarRotaNuvem(rotaId: String, status: String) {
+            firebaseFinalizarRota(rotaId, status) { _, msg ->
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                    binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
+                    listarRotasNuvem()
+                }
             }
         }
 

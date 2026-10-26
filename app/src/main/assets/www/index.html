@@ -20,6 +20,7 @@
             --text-muted: #8b949e;
             --success: #238636;
             --success-glow: #2ea043;
+            --emerald: #10b981;
             --warning: #d29922;
             --danger: #da3633;
             --radius-sm: 8px;
@@ -54,7 +55,7 @@
 
         .tab-btn {
             flex: 1;
-            min-width: 65px;
+            min-width: 60px;
             background: transparent;
             border: none;
             color: var(--text-muted);
@@ -117,6 +118,254 @@
             gap: 6px;
         }
 
+        /* Hub de Rotas */
+        .route-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--ml-yellow);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            transition: all 0.2s ease;
+        }
+        .route-card.finalizada {
+            border-left-color: var(--emerald);
+            opacity: 0.9;
+        }
+        .route-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .route-card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+        .route-card-status-badge {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .route-card-status-badge.em_andamento {
+            background: rgba(255, 230, 0, 0.15);
+            color: var(--ml-yellow);
+            border: 1px solid var(--ml-yellow);
+        }
+        .route-card-status-badge.finalizada {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid var(--emerald);
+        }
+        .route-card-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .route-card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .route-stat-item {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 6px;
+            text-align: center;
+        }
+        .route-stat-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+        .route-stat-lbl {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: var(--surface-card);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #2ea043);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .route-card-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn-route-action {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            background: var(--surface-hover);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-route-action.primary {
+            background: var(--ml-yellow);
+            color: #000;
+            border-color: var(--ml-yellow-dark);
+        }
+        .btn-route-action.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border-color: var(--emerald);
+        }
+        .btn-route-action.danger {
+            background: rgba(218, 54, 51, 0.15);
+            color: #f85149;
+            border-color: #f85149;
+        }
+
+        /* Stop Card */
+        .stop-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--ml-blue);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .stop-card.stop-delivered {
+            border-left-color: var(--emerald) !important;
+            background: rgba(16, 185, 129, 0.05);
+        }
+        .stop-delivered-badge {
+            background: var(--emerald);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-finalizar-parada {
+            background: var(--emerald) !important;
+            color: #ffffff !important;
+            border-color: #059669 !important;
+            font-weight: 800 !important;
+        }
+        .btn-desfazer-parada {
+            background: rgba(139, 148, 158, 0.2) !important;
+            color: var(--text-muted) !important;
+            border-color: var(--border) !important;
+        }
+
+        .stop-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .stop-number {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--ml-yellow);
+        }
+
+        .recipient-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stop-address {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 4px 0 8px 0;
+            line-height: 1.4;
+        }
+
+        .packages-container {
+            background: var(--surface-card);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            margin-top: 6px;
+        }
+
+        .pkg-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 12px;
+        }
+        .pkg-item:last-child { border-bottom: none; }
+
+        .pkg-code {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .pkg-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .pkg-badge.checked { background: var(--success); color: #fff; }
+        .pkg-badge.pending { background: var(--surface-hover); color: var(--text-muted); }
+
+        .stop-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action-small {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 6px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: var(--surface-hover);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
         /* Biper View */
         .scanner-hero {
             background: linear-gradient(145deg, #161b22, #1f242c);
@@ -160,23 +409,22 @@
             color: #000;
             border: none;
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             border-radius: var(--radius-md);
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             box-shadow: 0 6px 20px rgba(255, 230, 0, 0.25);
             transition: transform 0.1s, box-shadow 0.1s;
         }
 
         .btn-big-scan:active { transform: scale(0.98); box-shadow: 0 2px 10px rgba(255, 230, 0, 0.4); }
-        .btn-big-scan svg { width: 24px; height: 24px; stroke: #000; fill: none; stroke-width: 2.5; }
+        .btn-big-scan svg { width: 22px; height: 22px; stroke: #000; fill: none; stroke-width: 2.5; }
 
-        /* Manual Input Barcode */
         .manual-input-box {
             display: flex;
             gap: 8px;
@@ -265,107 +513,6 @@
             display: inline-block;
         }
 
-        /* Paradas List */
-        .stop-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-left: 5px solid var(--ml-blue);
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            margin-bottom: 8px;
-            transition: border-color 0.2s;
-        }
-
-        .stop-card.completed {
-            border-left-color: var(--success-glow);
-            opacity: 0.85;
-        }
-
-        .stop-card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .stop-number {
-            font-size: 16px;
-            font-weight: 800;
-            color: var(--ml-yellow);
-        }
-
-        .recipient-name {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .stop-address {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin: 4px 0 8px 0;
-            line-height: 1.4;
-        }
-
-        .packages-container {
-            background: var(--surface-card);
-            border-radius: var(--radius-sm);
-            padding: 8px;
-            margin-top: 6px;
-        }
-
-        .pkg-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 4px 0;
-            border-bottom: 1px dashed var(--border);
-            font-size: 12px;
-        }
-        .pkg-item:last-child { border-bottom: none; }
-
-        .pkg-code {
-            font-family: monospace;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        .pkg-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        .pkg-badge.checked { background: var(--success); color: #fff; }
-        .pkg-badge.pending { background: var(--surface-hover); color: var(--text-muted); }
-
-        .stop-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .btn-action-small {
-            flex: 1;
-            padding: 8px;
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            font-weight: 600;
-            border: 1px solid var(--border);
-            background: var(--surface-hover);
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-        .btn-action-small.nav-btn {
-            background: rgba(47, 129, 247, 0.15);
-            border-color: var(--ml-blue);
-            color: var(--ml-blue-hover);
-        }
-
         /* Car View */
         .car-zone-container {
             display: flex;
@@ -397,7 +544,6 @@
 
         #map { height: 100%; width: 100%; }
 
-        /* Floating Map Stats Bar */
         .map-stats-overlay {
             position: absolute;
             top: 10px;
@@ -415,7 +561,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
-        /* Map Controls Bottom */
         .map-controls-overlay {
             position: absolute;
             bottom: 12px;
@@ -433,14 +578,14 @@
             border: 1px solid var(--border);
             padding: 10px;
             border-radius: var(--radius-sm);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 4px;
         }
         .btn-map-control.primary {
             background: var(--ml-yellow);
@@ -448,19 +593,11 @@
             border-color: var(--ml-yellow-dark);
         }
 
-        /* Test Mode / Simulator Styles */
-        .test-box {
-            background: #1c2333;
-            border: 1px solid #2f3e5f;
-            border-radius: var(--radius-md);
-            padding: 14px;
-        }
-
         .test-btn {
             background: var(--surface-hover);
             color: var(--text-main);
             border: 1px solid var(--border);
-            padding: 10px 12px;
+            padding: 12px 14px;
             border-radius: var(--radius-sm);
             font-size: 13px;
             font-weight: 600;
@@ -477,7 +614,6 @@
         .test-btn.primary { background: rgba(255, 230, 0, 0.15); border-color: var(--ml-yellow); color: var(--ml-yellow); }
         .test-btn.highlight { background: rgba(47, 129, 247, 0.15); border-color: var(--ml-blue); color: var(--ml-blue-hover); }
 
-        /* Notification Toast */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -515,39 +651,247 @@
         .custom-pin-inner span {
             transform: rotate(45deg);
         }
+        .custom-pin-delivered {
+            background: #10b981 !important;
+            color: #fff !important;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
+        }
+
+        /* Modal Dialog */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Bottom/Top Navigation Tabs -->
+    <!-- Top Navigation Tabs -->
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-biper', this)">
-            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
-            Biper
+        <button class="tab-btn active" onclick="switchTab('tab-rotas', this)">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/></svg>
+            Rotas
         </button>
         <button class="tab-btn" onclick="switchTab('tab-paradas', this)">
             <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
             Paradas
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-carro', this)">
-            <svg viewBox="0 0 24 24"><path d="M5 17h14M7 9l2-5h6l2 5M4 17V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7M6 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
-            Veículo
-        </button>
         <button class="tab-btn" onclick="switchTab('tab-mapa', this)">
             <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
             Mapa
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-nuvem', this)">
-            <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-            Nuvem
+        <button class="tab-btn" onclick="switchTab('tab-carro', this)">
+            <svg viewBox="0 0 24 24"><path d="M5 17h14M7 9l2-5h6l2 5M4 17V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7M6 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+            Veículo
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-biper', this)">
+            <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
+            Biper
         </button>
     </div>
 
     <!-- Main Content Container -->
     <div class="content-area">
 
-        <!-- TAB 1: BIPER / CONFERÊNCIA -->
-        <div id="tab-biper" class="tab-content active">
+        <!-- TAB 1: HUB DE ROTAS (BANCO DE DADOS FIREBASE) -->
+        <div id="tab-rotas" class="tab-content active">
+            <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1c2214, #161b22);">
+                <div class="card-header" style="margin-bottom: 4px;">
+                    <span class="card-title" style="color: var(--ml-yellow); font-size: 15px;">
+                        📋 Banco de Dados Firebase (Rotas na Nuvem)
+                    </span>
+                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window.Android && window.Android.abrirConfiguracoes ? window.Android.abrirConfiguracoes() : alert('Abra as configurações no topo ⚙️')">
+                        ⚙️ Config
+                    </button>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">
+                    Todas as rotas criadas são <b>salvas automaticamente no banco de dados</b>. Acesse, acompanhe e finalize de qualquer celular conectado!
+                </p>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-big-scan" style="padding: 12px; font-size: 14px; flex: 1.2;" onclick="abrirModalCriarRota()">
+                        ➕ Criar Nova Rota
+                    </button>
+                    <button class="btn-secondary" style="padding: 12px 14px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px;" onclick="recarregarRotasNuvem()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Banner Rota Ativa -->
+            <div id="banner-rota-ativa" style="display: none;" class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--ml-yellow); font-weight: 800;">
+                            🚀 Rota Ativa no Momento
+                        </div>
+                        <div id="banner-rota-ativa-nome" style="font-size: 14px; font-weight: 700; color: #fff;">
+                            Nome da Rota
+                        </div>
+                    </div>
+                    <button class="btn-action-small" onclick="switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1])" style="background: var(--ml-yellow); color: #000; font-weight: 800; padding: 8px 12px;">
+                        Ver Paradas 📍
+                    </button>
+                </div>
+            </div>
+
+            <!-- List of All Routes from Firebase -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                        Rotas Salvas no Banco (<span id="total-rotas-contador">0</span>)
+                    </span>
+                    <span id="sync-rotas-status" style="font-size: 11px; color: #10b981; font-weight: 600;">
+                        ● Sincronizado ao vivo
+                    </span>
+                </div>
+                <div id="lista-rotas-container">
+                    <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
+                        Carregando rotas do Firebase...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PARADAS DETALHADAS -->
+        <div id="tab-paradas" class="tab-content">
+            <div class="card" style="padding: 12px 14px; border-left: 4px solid var(--ml-yellow);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <div>
+                        <div id="paradas-nome-rota" style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
+                            Nenhuma Rota Selecionada
+                        </div>
+                        <div id="paradas-sub-progresso" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                            0 de 0 paradas finalizadas (0%)
+                        </div>
+                    </div>
+                    <span id="paradas-status-badge" class="route-card-status-badge em_andamento">
+                        Em Andamento
+                    </span>
+                </div>
+
+                <div class="progress-bar-container" style="margin-bottom: 8px;">
+                    <div id="paradas-progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button id="btn-finalizar-rota-topo" class="btn-action-small" onclick="alternarFinalizarRotaAtiva()" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border-color: #10b981; font-weight: 700;">
+                        🏁 Finalizar Rota
+                    </button>
+                    <button class="btn-action-small" onclick="switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2])" style="background: rgba(47, 129, 247, 0.2); color: #58a6ff; border-color: #58a6ff; font-weight: 700;">
+                        🗺️ Ver no Mapa
+                    </button>
+                    <button class="btn-action-small" onclick="switchTab('tab-rotas', document.querySelectorAll('.tab-btn')[0])" style="background: var(--surface-card); color: var(--text-muted);">
+                        📋 Trocar Rota
+                    </button>
+                </div>
+            </div>
+
+            <div id="stops-list-container">
+                <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
+                    Nenhuma rota aberta no momento.<br>
+                    Toque na aba <b>📋 Rotas</b> para abrir uma rota do banco de dados ou criar uma nova!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MAPA INTERATIVO -->
+        <div id="tab-mapa" class="tab-content">
+            <div id="map-container">
+                <div id="map"></div>
+                
+                <!-- Floating Info Overlay -->
+                <div class="map-stats-overlay" id="map-stats-box">
+                    <div>
+                        <b id="map-route-title" style="color: var(--ml-yellow); font-size: 13px;">Carregue uma rota</b>
+                        <div id="map-route-sub" style="font-size: 11px; color: var(--text-muted);">Aguardando dados...</div>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span id="map-route-entregas-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                            0/0 Entregues
+                        </span>
+                        <span id="map-route-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: var(--surface-card);">
+                            0 km
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Floating Controls Overlay -->
+                <div class="map-controls-overlay">
+                    <button class="btn-map-control primary" onclick="executarOtimizacaoRota()">
+                        ⚡ OTIMIZAR
+                    </button>
+                    <button class="btn-map-control" onclick="alternarVisaoRota()">
+                        🔄 BRUTA / OTIMIZADA
+                    </button>
+                    <button class="btn-map-control" id="btn-map-finalizar-rota" onclick="alternarFinalizarRotaAtiva()" style="background: #10b981; color: #fff; border-color: #059669;">
+                        🏁 FINALIZAR ROTA
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: ORGANIZAÇÃO NO CARRO -->
+        <div id="tab-carro" class="tab-content">
+            <div class="card" style="border-left: 4px solid var(--ml-yellow); padding: 10px 14px;">
+                <div style="font-size: 13px; font-weight: bold; color: var(--ml-yellow);">Divisão por Zonas do Carro:</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Os pacotes são organizados conforme a sequência otimizada de entrega para evitar mexer no fundo do carro no início do trajeto.
+                </div>
+            </div>
+
+            <div class="car-zone-container">
+                <!-- Zona 1: Frente -->
+                <div>
+                    <div class="zone-header zone-frente">
+                        <span>🟢 ZONA 1: FRENTE (PRIMEIRAS PARADAS)</span>
+                        <span id="badge-count-frente" style="font-size: 12px;">0 paradas</span>
+                    </div>
+                    <div id="list-zona-frente" style="margin-top: 6px;"></div>
+                </div>
+
+                <!-- Zona 2: Meio -->
+                <div>
+                    <div class="zone-header zone-meio">
+                        <span>🟡 ZONA 2: MEIO (PARADAS INTERMEDIÁRIAS)</span>
+                        <span id="badge-count-meio" style="font-size: 12px;">0 paradas</span>
+                    </div>
+                    <div id="list-zona-meio" style="margin-top: 6px;"></div>
+                </div>
+
+                <!-- Zona 3: Porta-malas -->
+                <div>
+                    <div class="zone-header zone-mala">
+                        <span>🔴 ZONA 3: PORTA-MALAS (ÚLTIMAS PARADAS)</span>
+                        <span id="badge-count-mala" style="font-size: 12px;">0 paradas</span>
+                    </div>
+                    <div id="list-zona-mala" style="margin-top: 6px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: BIPER / CONFERÊNCIA -->
+        <div id="tab-biper" class="tab-content">
             <div class="scanner-hero">
                 <div class="card-header" style="justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="card-title" style="color: var(--ml-yellow);">
@@ -619,203 +963,52 @@
                     <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="limparHistoricoBipes()">Limpar</button>
                 </div>
                 <div id="recent-bipes-list" style="font-size: 13px; color: var(--text-muted);">
-                    Nenhum pacote bipado ainda. Toque em '1. Ler Tela' para ler a rota ou use o botão 'BIPAR ETIQUETA / QR'.
+                    Nenhum pacote bipado ainda.
                 </div>
             </div>
         </div>
 
-        <!-- TAB 2: PARADAS DETALHADAS -->
-        <div id="tab-paradas" class="tab-content">
-            <div class="card" style="padding: 10px 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 14px; font-weight: 700;" id="stops-counter-badge">0 Paradas Carregadas</div>
-                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3])">
-                        🗺️ Ver no Mapa
-                    </button>
-                </div>
-            </div>
+    </div>
 
-            <div id="stops-list-container">
-                <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
-                    Nenhuma rota carregada no momento.<br>
-                    Toque em <b>'1. Ler Tela'</b> no topo para ler a tela do Envios Extra ou toque em <b>📷 OCR</b> para carregar prints da galeria!
-                </div>
+    <!-- Modal Criar Nova Rota -->
+    <div id="modal-criar-rota" class="modal-overlay" onclick="fecharModalCriarRota(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: var(--ml-yellow);">➕ Criar Nova Rota</h3>
+                <button onclick="fecharModalCriarRota()" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
-        </div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                Escolha como deseja criar a rota. Ela será automaticamente gravada no Firebase e ficará disponível para todos os celulares:
+            </p>
 
-        <!-- TAB 3: ORGANIZAÇÃO NO CARRO -->
-        <div id="tab-carro" class="tab-content">
-            <div class="card" style="border-left: 4px solid var(--ml-yellow); padding: 10px 14px;">
-                <div style="font-size: 13px; font-weight: bold; color: var(--ml-yellow);">Divisão por Zonas do Carro:</div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                    Os pacotes são organizados conforme a sequência otimizada de entrega para evitar mexer no fundo do carro no início do trajeto.
-                </div>
-            </div>
-
-            <div class="car-zone-container">
-                <!-- Zona 1: Frente -->
+            <button class="test-btn highlight" onclick="fecharModalCriarRota(); acionarOcrGaleria();" style="border-color: #58a6ff;">
                 <div>
-                    <div class="zone-header zone-frente">
-                        <span>🟢 ZONA 1: FRENTE (PRIMEIRAS PARADAS)</span>
-                        <span id="badge-count-frente" style="font-size: 12px;">0 paradas</span>
-                    </div>
-                    <div id="list-zona-frente" style="margin-top: 6px;"></div>
+                    <div style="font-size: 14px; font-weight: 800; color: #58a6ff;">📷 1. Ler Fotos da Galeria (OCR)</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Extrai endereços de prints do aplicativo Envios Extra</div>
                 </div>
+                <span style="font-size: 18px;">🖼️</span>
+            </button>
 
-                <!-- Zona 2: Meio -->
+            <button class="test-btn primary" onclick="fecharModalCriarRota(); criarRotaReal11Paradas();" style="border-color: var(--ml-yellow);">
                 <div>
-                    <div class="zone-header zone-meio">
-                        <span>🟡 ZONA 2: MEIO (PARADAS INTERMEDIÁRIAS)</span>
-                        <span id="badge-count-meio" style="font-size: 12px;">0 paradas</span>
-                    </div>
-                    <div id="list-zona-meio" style="margin-top: 6px;"></div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">⚡ 2. Rota Envios Extra Real (11 Paradas)</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Campinas (Guanabara/Taquaral/Cambuí) - 62 pacotes</div>
                 </div>
+                <span style="font-size: 18px;">📦</span>
+            </button>
 
-                <!-- Zona 3: Porta-malas -->
+            <button class="test-btn" onclick="fecharModalCriarRota(); criarRotaReal40Paradas();">
                 <div>
-                    <div class="zone-header zone-mala">
-                        <span>🔴 ZONA 3: PORTA-MALAS (ÚLTIMAS PARADAS)</span>
-                        <span id="badge-count-mala" style="font-size: 12px;">0 paradas</span>
-                    </div>
-                    <div id="list-zona-mala" style="margin-top: 6px;"></div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">🗺️ 3. Rota Grande Campinas (40 Paradas)</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">40 paradas distribuídas na região de Campinas</div>
                 </div>
-            </div>
+                <span style="font-size: 18px;">📍</span>
+            </button>
+
+            <button class="btn-secondary" style="padding: 10px; margin-top: 6px; width: 100%;" onclick="fecharModalCriarRota()">
+                Cancelar
+            </button>
         </div>
-
-        <!-- TAB 4: MAPA INTERATIVO -->
-        <div id="tab-mapa" class="tab-content">
-            <div id="map-container">
-                <div id="map"></div>
-                
-                <!-- Floating Info Overlay -->
-                <div class="map-stats-overlay" id="map-stats-box">
-                    <div>
-                        <b id="map-route-title" style="color: var(--ml-yellow); font-size: 13px;">Carregue uma rota</b>
-                        <div id="map-route-sub" style="font-size: 11px; color: var(--text-muted);">Aguardando dados...</div>
-                    </div>
-                    <div id="map-route-badge" style="font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: var(--surface-card);">
-                        0 km
-                    </div>
-                </div>
-
-                <!-- Floating Controls Overlay -->
-                <div class="map-controls-overlay">
-                    <button class="btn-map-control primary" onclick="executarOtimizacaoRota()">
-                        ⚡ OTIMIZAR ROTA
-                    </button>
-                    <button class="btn-map-control" onclick="alternarVisaoRota()">
-                        🔄 ROTA BRUTA VS OTIMIZADA
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 5: NUVEM FIREBASE & FERRAMENTAS -->
-        <div id="tab-nuvem" class="tab-content">
-            <!-- Firebase Realtime Database Status Card -->
-            <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1f2619, #161b22); margin-bottom: 12px;">
-                <div class="card-header">
-                    <span class="card-title" style="color: var(--ml-yellow); display: flex; align-items: center; gap: 6px;">
-                        🔥 Google Firebase (Nuvem em Tempo Real)
-                    </span>
-                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window.Android && window.Android.abrirConfiguracoes ? window.Android.abrirConfiguracoes() : alert('Abra as configurações no topo ⚙️')">
-                        ⚙️ Chaves & Config
-                    </button>
-                </div>
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-                    Sincronização instantânea das rotas e pacotes bipados no Google Firebase. Compartilhe o progresso e recupere rotas em qualquer celular.
-                </p>
-
-                <div id="firebase-status-box" style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; font-size: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: var(--text-muted);">Banco de Dados:</span>
-                        <span id="firebase-status-label" style="font-weight: 700; color: #10b981;">● Firebase Habilitado</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: var(--text-muted);">Sala / Motorista:</span>
-                        <span id="firebase-sala-label" style="font-weight: 700; color: var(--ml-blue-hover);">rotaml-41f8a-default-rtdb</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: var(--text-muted);">Bipes ao vivo:</span>
-                        <span style="font-weight: 700; color: var(--ml-yellow);">⚡ Sincronização Automática</span>
-                    </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button class="test-btn highlight" onclick="salvarRotaParaFirebase()" style="background: rgba(255, 230, 0, 0.15); border-color: var(--ml-yellow);">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
-                                ☁️ 1. Salvar Rota Atual no Firebase
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
-                                Faz upload de todas as paradas e status de conferência para a nuvem
-                            </div>
-                        </div>
-                        <span style="font-size: 16px;">⬆️</span>
-                    </button>
-
-                    <button class="test-btn primary" onclick="baixarRotaDoFirebase()">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-blue-hover);">
-                                📥 2. Baixar Rota Salva do Firebase
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
-                                Carrega no app a rota previamente salva por você ou pela equipe
-                            </div>
-                        </div>
-                        <span style="font-size: 16px;">⬇️</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Route Tools & OCR Card -->
-            <div class="card" style="border: 1px solid var(--border); background: var(--surface);">
-                <div class="card-header">
-                    <span class="card-title" style="color: var(--text-main);">
-                        ⚡ Ferramentas de Rota & OCR
-                    </span>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                    <button class="test-btn" onclick="executarOtimizacaoRota()">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
-                                🔄 Otimizar Trajeto no Mapa (Menor Percurso)
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
-                                Elimina cruzamentos desnecessários e organiza sequência de 1 a N
-                            </div>
-                        </div>
-                        <span style="font-size: 16px;">🗺️</span>
-                    </button>
-
-                    <button class="test-btn" onclick="acionarOcrGaleria()">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-blue-hover);">
-                                📷 Ler Fotos / Prints com IA (OCR)
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
-                                Carrega prints da lista de paradas direto da galeria
-                            </div>
-                        </div>
-                        <span style="font-size: 16px;">🖼️</span>
-                    </button>
-
-                    <button class="test-btn" onclick="toggleMuteSound()">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: var(--text-main);" id="btn-label-sound-tab">
-                                🔊 Áudio & Avisos por Voz: Ativado
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
-                                Toque para alternar entre Som Ligado e Mudo
-                            </div>
-                        </div>
-                        <span style="font-size: 16px;" id="btn-icon-sound-tab">🔊</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <div id="toast" class="toast">Mensagem</div>
@@ -833,15 +1026,6 @@
                 btnSound.innerHTML = isAudioMuted ? '🔇 Mudo' : '🔊 Som';
                 btnSound.style.color = isAudioMuted ? '#ef4444' : '#10b981';
             }
-            const lblSoundTab = document.getElementById('btn-label-sound-tab');
-            const iconSoundTab = document.getElementById('btn-icon-sound-tab');
-            if (lblSoundTab) {
-                lblSoundTab.innerText = isAudioMuted ? '🔇 Áudio & Avisos por Voz: Desativado (Mudo)' : '🔊 Áudio & Avisos por Voz: Ativado';
-                lblSoundTab.style.color = isAudioMuted ? '#ef4444' : 'var(--text-main)';
-            }
-            if (iconSoundTab) {
-                iconSoundTab.innerText = isAudioMuted ? '🔇' : '🔊';
-            }
         }
 
         function toggleMuteSound() {
@@ -853,51 +1037,11 @@
             showToast(isAudioMuted ? "🔇 Som Desativado (Modo Silencioso)" : "🔊 Som Ativado com Avisos de Voz");
         }
 
-        // Firebase Cloud Functions
-        function salvarRotaParaFirebase() {
-            if (rotaAtual.length === 0) {
-                showToast("Nenhuma rota carregada para salvar!");
-                return;
-            }
-            if (window.Android && window.Android.salvarRotaFirebase) {
-                showToast("Enviando rota para o Firebase...");
-                window.Android.salvarRotaFirebase(JSON.stringify(rotaAtual));
-            } else {
-                showToast("Simulação: Rota salva com sucesso no Firebase!");
-            }
-        }
-
-        function baixarRotaDoFirebase() {
-            if (window.Android && window.Android.carregarRotaFirebase) {
-                showToast("Conectando ao Firebase...");
-                window.Android.carregarRotaFirebase();
-            } else {
-                showToast("Conexão com Firebase disponível no aplicativo Android.");
-            }
-        }
-
         function acionarOcrGaleria() {
             if (window.Android && window.Android.abrirSeletorGaleria) {
                 window.Android.abrirSeletorGaleria();
             } else {
                 showToast("Seletor de fotos disponível no aplicativo Android.");
-            }
-        }
-
-        function atualizarStatusFirebase() {
-            if (window.Android && window.Android.getFirebaseStatus) {
-                try {
-                    let st = JSON.parse(window.Android.getFirebaseStatus());
-                    const lbl = document.getElementById('firebase-status-label');
-                    const sala = document.getElementById('firebase-sala-label');
-                    if (lbl) {
-                        lbl.innerText = st.configurado ? '● Conectado ao Firebase' : '⚠️ Não configurado';
-                        lbl.style.color = st.configurado ? '#10b981' : '#f59e0b';
-                    }
-                    if (sala) {
-                        sala.innerText = st.sala || 'rota_extra';
-                    }
-                } catch (e) {}
             }
         }
 
@@ -936,11 +1080,44 @@
                 },
                 setAudioMuted: function(m) {
                     isAudioMuted = m;
+                },
+                listarRotasNuvem: function() {
+                    setTimeout(() => {
+                        window.receberListaRotasFirebase(todasRotasNuvem, true, "OK");
+                    }, 300);
+                },
+                salvarRotaAuto: function(id, json) {
+                    todasRotasNuvem[id] = JSON.parse(json);
+                    console.log("[Firebase AutoSave]", id);
+                },
+                excluirRotaNuvem: function(id) {
+                    delete todasRotasNuvem[id];
+                    window.receberListaRotasFirebase(todasRotasNuvem, true, "Excluído");
+                },
+                atualizarStatusParadaNuvem: function(id, index, finalizada, hora) {
+                    console.log("[Firebase Parada Update]", id, index, finalizada, hora);
+                },
+                finalizarRotaNuvem: function(id, st) {
+                    if (todasRotasNuvem[id]) todasRotasNuvem[id].status = st;
+                    window.receberListaRotasFirebase(todasRotasNuvem, true, "OK");
                 }
             };
         }
 
         // Global State
+        let todasRotasNuvem = {};
+        let rotaAtivaId = null;
+        let rotaAtivaMeta = {
+            id: null,
+            titulo: "",
+            criado_em: null,
+            criado_em_str: "",
+            status: "em_andamento",
+            total_paradas: 0,
+            total_pacotes: 0,
+            paradas_finalizadas: 0
+        };
+
         let rotaBrutaOriginal = [];
         let rotaAtual = [];
         let isRotaOtimizada = false;
@@ -959,7 +1136,7 @@
                     console.warn("Leaflet não disponível offline");
                     return;
                 }
-                map = L.map('map').setView([-22.9150, -47.0800], 13); // Centro de Campinas
+                map = L.map('map').setView([-22.8850, -47.0580], 13); // Região de Campinas
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap'
                 }).addTo(map);
@@ -977,7 +1154,9 @@
             if (target) target.classList.add('active');
             if (el) el.classList.add('active');
 
-            if (tabId === 'tab-mapa') {
+            if (tabId === 'tab-rotas') {
+                recarregarRotasNuvem();
+            } else if (tabId === 'tab-mapa') {
                 initMap();
                 setTimeout(() => {
                     if (map) {
@@ -993,6 +1172,15 @@
             toast.innerText = msg;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2800);
+        }
+
+        // Modal Criar Rota
+        function abrirModalCriarRota() {
+            document.getElementById('modal-criar-rota').classList.add('active');
+        }
+
+        function fecharModalCriarRota(e) {
+            document.getElementById('modal-criar-rota').classList.remove('active');
         }
 
         // Scanner Trigger
@@ -1016,28 +1204,9 @@
             input.value = '';
         }
 
-        // Test Bipe Helper
         function testarBipeCodigo(code) {
-            switchTab('tab-biper', document.querySelectorAll('.tab-btn')[0]);
+            switchTab('tab-biper', document.querySelectorAll('.tab-btn')[4]);
             confirmarBipe(code);
-        }
-
-        // Simular 5 bipes em sequência
-        function simularBipe5Aleatorios() {
-            if (rotaAtual.length === 0) {
-                carregar40ParadasCampinas(true);
-            }
-            switchTab('tab-biper', document.querySelectorAll('.tab-btn')[0]);
-            
-            let indexes = [0, 10, 20, 30, 39];
-            indexes.forEach((idx, i) => {
-                setTimeout(() => {
-                    let p = rotaAtual[idx];
-                    if (p && p.pacotes && p.pacotes[0]) {
-                        confirmarBipe(p.pacotes[0].id);
-                    }
-                }, i * 2200);
-            });
         }
 
         // -------------------------------------------------------------
@@ -1054,18 +1223,20 @@
         }
 
         function calcularDistanciaTotalRota(pontos) {
+            if (!pontos || pontos.length < 2) return 0;
             let dist = 0;
             for (let i = 0; i < pontos.length - 1; i++) {
-                dist += calcDistanceKm(pontos[i].lat, pontos[i].lng, pontos[i+1].lat, pontos[i+1].lng);
+                if (pontos[i].lat && pontos[i+1].lat) {
+                    dist += calcDistanceKm(pontos[i].lat, pontos[i].lng, pontos[i+1].lat, pontos[i+1].lng);
+                }
             }
             return dist;
         }
 
         // Otimizador Heurístico TSP (Nearest Neighbor + 2-Opt)
         function otimizarPontosTSP(pontos) {
-            if (pontos.length <= 2) return [...pontos];
+            if (!pontos || pontos.length <= 2) return (pontos || []).map(p => ({ ...p }));
 
-            // 1. Vizinho Mais Próximo iniciando pelo primeiro ponto
             let restantes = pontos.map(p => ({ ...p }));
             let rotaOtimizada = [restantes.shift()];
 
@@ -1084,7 +1255,6 @@
                 rotaOtimizada.push(restantes.splice(maisProximoIdx, 1)[0]);
             }
 
-            // 2. Busca Local 2-Opt para desatar cruzamentos
             let melhorou = true;
             let iter = 0;
             while (melhorou && iter < 60) {
@@ -1111,7 +1281,6 @@
                 }
             }
 
-            // Atualiza números das paradas e zonas
             const total = rotaOtimizada.length;
             rotaOtimizada.forEach((p, idx) => {
                 p.parada_num = idx + 1;
@@ -1127,10 +1296,9 @@
             return rotaOtimizada;
         }
 
-        // Executar Otimização
         function executarOtimizacaoRota() {
             if (rotaAtual.length === 0) {
-                showToast("Nenhuma rota carregada para otimizar! Toque em '1. Ler Tela' ou 📷 OCR.");
+                showToast("Nenhuma rota carregada para otimizar!");
                 return;
             }
 
@@ -1144,17 +1312,17 @@
             atualizarEstatisticas();
             renderizarParadas();
             renderizarZonasCarro();
-            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3]);
+            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2]);
             renderizarMapa();
 
-            let speakMsg = `Rota otimizada! ${rotaAtual.length} paradas reorganizadas na melhor sequência. Economia estimada de ${economia} quilômetros.`;
+            let speakMsg = `Rota otimizada! ${rotaAtual.length} paradas na melhor sequência. Economia de ${economia} quilômetros.`;
             if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(speakMsg);
             }
-            showToast(`🚀 Rota Otimizada! ${rotaAtual.length} paradas com economia de ${economia} km (${perc}%)!`);
+            showToast(`🚀 Rota Otimizada! Economia de ${economia} km (${perc}%)!`);
+            salvarEstadoRotaAtivaNoBanco();
         }
 
-        // Alternar Visão: Rota Bruta (Zig-Zag) vs Rota Otimizada
         function alternarVisaoRota() {
             if (rotaBrutaOriginal.length === 0) {
                 showToast("Carregue uma rota primeiro!");
@@ -1162,12 +1330,10 @@
             }
 
             if (isRotaOtimizada) {
-                // Voltar para rota bruta
                 rotaAtual = rotaBrutaOriginal.map(p => ({ ...p }));
                 isRotaOtimizada = false;
                 showToast("Mostrando Rota Bruta (como lida da tela)");
             } else {
-                // Ir para rota otimizada
                 rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
                 isRotaOtimizada = true;
                 showToast("Mostrando Rota Otimizada (menor distância)");
@@ -1180,7 +1346,7 @@
         }
 
         // -------------------------------------------------------------
-        // SMART PACKAGE MATCHER COM SUPORTE A MÚLTIPLAS UNIDADES
+        // SMART PACKAGE MATCHER
         // -------------------------------------------------------------
         function localizarPacoteERota(codigoBipado) {
             let limpo = codigoBipado.trim();
@@ -1189,7 +1355,6 @@
 
             let firstConferidoMatch = null;
 
-            // 1ª passada: Busca pacote ainda pendente (!pkg.conferido)
             for (let i = 0; i < rotaAtual.length; i++) {
                 let parada = rotaAtual[i];
                 if (!parada.pacotes) continue;
@@ -1229,11 +1394,9 @@
                 }
             }
 
-            // Se todos os pacotes correspondentes já foram conferidos, retorna como duplicado
             return firstConferidoMatch;
         }
 
-        // Bipe Confirmation Handler
         window.confirmarBipe = function(code) {
             if (!code) return;
             code = code.toString().trim();
@@ -1243,7 +1406,6 @@
             const match = localizarPacoteERota(code);
 
             if (!match) {
-                // Pacote fora da rota
                 resultBox.className = 'bipe-result-card danger';
                 document.getElementById('bipe-res-stop').innerText = "NÃO ENCONTRADO";
                 document.getElementById('bipe-res-zone').innerText = "FORA DA ROTA";
@@ -1273,7 +1435,6 @@
                 return;
             }
 
-            // Sucesso!
             const { paradaIndex, parada, pacoteIndex, pacote } = match;
             pacotesBipados.add(pacote.id);
             pacote.conferido = true;
@@ -1320,7 +1481,6 @@
             });
             document.getElementById('bipe-res-packages-list').innerHTML = pkgsHtml;
 
-            // Voice Feedback
             let speakText = `Parada ${paradaIndex + 1}. ${parada.destinatario ? parada.destinatario.split(' ')[0] : ''}. Guardar na ${zonaNome.split(' ')[0]}.`;
             if (totalDestaParada > 1) {
                 if (conferidosDestaParada === totalDestaParada) {
@@ -1337,12 +1497,10 @@
             if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak(speakText);
             if (window.Android && window.Android.vibrar) window.Android.vibrar("success");
 
-            // Sincroniza bipe em tempo real com o Firebase
             if (window.Android && window.Android.syncBipeFirebase) {
                 window.Android.syncBipeFirebase(code, paradaIndex + 1);
             }
 
-            // Log
             historicoBipes.unshift({
                 hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                 paradaNum: paradaIndex + 1,
@@ -1355,6 +1513,7 @@
             atualizarEstatisticas();
             renderizarParadas();
             renderizarZonasCarro();
+            salvarEstadoRotaAtivaNoBanco();
         };
 
         function atualizarHistorico() {
@@ -1391,55 +1550,173 @@
         function atualizarEstatisticas() {
             let totalPacotes = 0;
             let conferidos = 0;
+            let finalizadas = 0;
+
             rotaAtual.forEach(p => {
+                if (p.finalizada) finalizadas++;
                 if (p.pacotes) {
                     totalPacotes += p.pacotes.length;
                     conferidos += p.pacotes.filter(pkg => pkg.conferido).length;
                 }
             });
 
-            document.getElementById('stat-paradas').innerText = rotaAtual.length;
+            let total = rotaAtual.length;
+            let perc = total > 0 ? Math.round((finalizadas / total) * 100) : 0;
+
+            document.getElementById('stat-paradas').innerText = total;
             document.getElementById('stat-conferidos').innerText = conferidos;
             document.getElementById('stat-total-pacotes').innerText = totalPacotes;
-            document.getElementById('stops-counter-badge').innerText = `${rotaAtual.length} Paradas (${conferidos}/${totalPacotes} bipados)`;
+
+            // Header em Paradas
+            const nomeRotaEl = document.getElementById('paradas-nome-rota');
+            const subProgressoEl = document.getElementById('paradas-sub-progresso');
+            const badgeEl = document.getElementById('paradas-status-badge');
+            const barFill = document.getElementById('paradas-progress-bar-fill');
+            const btnFinalizarTopo = document.getElementById('btn-finalizar-rota-topo');
+
+            if (nomeRotaEl) nomeRotaEl.innerText = rotaAtivaMeta.titulo || (total > 0 ? `Rota com ${total} paradas` : "Nenhuma Rota Aberta");
+            if (subProgressoEl) subProgressoEl.innerText = `${finalizadas} de ${total} paradas finalizadas (${perc}%) • ${conferidos}/${totalPacotes} pacotes`;
+            if (barFill) barFill.style.width = `${perc}%`;
+
+            let isTudoFinalizado = (finalizadas === total && total > 0) || rotaAtivaMeta.status === "finalizada";
+            if (badgeEl) {
+                badgeEl.className = `route-card-status-badge ${isTudoFinalizado ? 'finalizada' : 'em_andamento'}`;
+                badgeEl.innerText = isTudoFinalizado ? '🏁 Finalizada' : '🟢 Em Andamento';
+            }
+            if (btnFinalizarTopo) {
+                btnFinalizarTopo.innerText = isTudoFinalizado ? '↩️ Reabrir Rota' : '🏁 Finalizar Rota';
+                btnFinalizarTopo.style.background = isTudoFinalizado ? 'rgba(139, 148, 158, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+                btnFinalizarTopo.style.color = isTudoFinalizado ? 'var(--text-muted)' : '#10b981';
+            }
+
+            // Map Stats
+            const mapEntregasBadge = document.getElementById('map-route-entregas-badge');
+            if (mapEntregasBadge) {
+                mapEntregasBadge.innerText = `${finalizadas}/${total} Entregues`;
+            }
+        }
+
+        // -------------------------------------------------------------
+        // FINALIZAÇÃO DE PARADAS E ROTAS (DA LISTA E DO MAPA)
+        // -------------------------------------------------------------
+        function alternarFinalizarParada(index) {
+            let p = rotaAtual[index];
+            if (!p) return;
+
+            p.finalizada = !p.finalizada;
+            if (p.finalizada) {
+                p.finalizadaEm = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                if (p.pacotes) {
+                    p.pacotes.forEach(pkg => {
+                        pkg.conferido = true;
+                        pacotesBipados.add(pkg.id);
+                    });
+                }
+                if (!isAudioMuted && window.Android && window.Android.speak) {
+                    window.Android.speak(`Parada ${index + 1} finalizada com sucesso!`);
+                }
+                if (window.Android && window.Android.vibrar) window.Android.vibrar("success");
+                showToast(`✅ Parada #${index + 1} finalizada!`);
+            } else {
+                p.finalizadaEm = null;
+                if (!isAudioMuted && window.Android && window.Android.speak) {
+                    window.Android.speak(`Entrega da parada ${index + 1} desfeita.`);
+                }
+                showToast(`↩️ Parada #${index + 1} reaberta`);
+            }
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            renderizarMapa();
+
+            if (rotaAtivaId && window.Android && window.Android.atualizarStatusParadaNuvem) {
+                window.Android.atualizarStatusParadaNuvem(rotaAtivaId, index, p.finalizada, p.finalizadaEm || "");
+            }
+            salvarEstadoRotaAtivaNoBanco();
+        }
+
+        function alternarFinalizarRotaAtiva() {
+            if (!rotaAtivaId || rotaAtual.length === 0) {
+                showToast("Nenhuma rota carregada para finalizar!");
+                return;
+            }
+
+            let novoStatus = rotaAtivaMeta.status === "finalizada" ? "em_andamento" : "finalizada";
+            let isFinalizando = (novoStatus === "finalizada");
+
+            if (isFinalizando) {
+                rotaAtual.forEach(p => {
+                    p.finalizada = true;
+                    if (!p.finalizadaEm) p.finalizadaEm = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    if (p.pacotes) p.pacotes.forEach(pkg => { pkg.conferido = true; pacotesBipados.add(pkg.id); });
+                });
+                rotaAtivaMeta.status = "finalizada";
+                if (!isAudioMuted && window.Android && window.Android.speak) {
+                    window.Android.speak("Parabéns! Rota concluída e todas as paradas finalizadas.");
+                }
+                showToast("🏁 Rota concluída com sucesso!");
+            } else {
+                rotaAtivaMeta.status = "em_andamento";
+                showToast("🔄 Rota reaberta!");
+            }
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            renderizarMapa();
+            salvarEstadoRotaAtivaNoBanco();
+
+            if (window.Android && window.Android.finalizarRotaNuvem) {
+                window.Android.finalizarRotaNuvem(rotaAtivaId, novoStatus);
+            }
         }
 
         // Render Stop List
         function renderizarParadas() {
             const container = document.getElementById('stops-list-container');
             if (rotaAtual.length === 0) {
-                container.innerHTML = `<div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">Nenhuma rota carregada.</div>`;
+                container.innerHTML = `<div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
+                    Nenhuma rota aberta no momento.<br>
+                    Toque na aba <b>📋 Rotas</b> para abrir uma rota do banco de dados ou criar uma nova!
+                </div>`;
                 return;
             }
 
             let html = '';
             rotaAtual.forEach((p, i) => {
+                let isEntregue = !!p.finalizada;
                 let todosConferidos = p.pacotes && p.pacotes.every(pkg => pkg.conferido);
                 let pkgsHtml = '';
                 
-                p.pacotes.forEach((pkg) => {
-                    pkgsHtml += `
-                        <div class="pkg-item">
-                            <div>
-                                <span class="pkg-code">📦 ${pkg.final ? 'Final: ' + pkg.final : pkg.id}</span>
-                                ${pkg.etiqueta ? '<span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">' + pkg.etiqueta + '</span>' : ''}
+                if (p.pacotes) {
+                    p.pacotes.forEach((pkg) => {
+                        pkgsHtml += `
+                            <div class="pkg-item">
+                                <div>
+                                    <span class="pkg-code">📦 ${pkg.final ? 'Final: ' + pkg.final : pkg.id}</span>
+                                    ${pkg.etiqueta ? '<span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">' + pkg.etiqueta + '</span>' : ''}
+                                </div>
+                                <span class="pkg-badge ${pkg.conferido || isEntregue ? 'checked' : 'pending'}">
+                                    ${pkg.conferido || isEntregue ? 'CONFERIDO' : 'PENDENTE'}
+                                </span>
                             </div>
-                            <span class="pkg-badge ${pkg.conferido ? 'checked' : 'pending'}">
-                                ${pkg.conferido ? 'CONFERIDO' : 'PENDENTE'}
-                            </span>
-                        </div>
-                    `;
-                });
+                        `;
+                    });
+                }
 
                 let zonaClass = i < rotaAtual.length/3 ? 'zone-frente' : (i < 2*rotaAtual.length/3 ? 'zone-meio' : 'zone-mala');
                 let zonaLabel = i < rotaAtual.length/3 ? 'Frente' : (i < 2*rotaAtual.length/3 ? 'Meio' : 'Porta-malas');
 
                 html += `
-                    <div class="stop-card ${todosConferidos ? 'completed' : ''}" id="stop-card-${i}">
+                    <div class="stop-card ${isEntregue ? 'stop-delivered' : (todosConferidos ? 'completed' : '')}" id="stop-card-${i}">
                         <div class="stop-card-top">
                             <div>
-                                <div class="stop-number">PARADA #${i + 1}</div>
-                                <div class="recipient-name">${p.destinatario || 'Cliente Mercado Livre'}</div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="stop-number">PARADA #${i + 1}</span>
+                                    ${isEntregue ? `<span class="stop-delivered-badge">✅ ENTREGUE ${p.finalizadaEm ? '(' + p.finalizadaEm + ')' : ''}</span>` : ''}
+                                </div>
+                                <div class="recipient-name" style="margin-top: 2px;">${p.destinatario || 'Cliente Mercado Livre'}</div>
                             </div>
                             <div style="text-align: right;">
                                 <span class="zone-pill ${zonaClass}">${zonaLabel}</span>
@@ -1453,22 +1730,22 @@
 
                         <div class="packages-container">
                             <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">
-                                Pacotes a entregar nesta parada (${p.pacotes.length}):
+                                Pacotes desta parada (${p.pacotes ? p.pacotes.length : 0}):
                             </div>
                             ${pkgsHtml}
                         </div>
 
-                        <div class="stop-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <div class="stop-actions">
                             <button class="btn-action-small" onclick="navegarWaze(${i})" style="background: rgba(47, 129, 247, 0.2); color: #58a6ff; border: 1px solid #58a6ff; font-weight: 700;">
                                 🚗 Waze
                             </button>
                             <button class="btn-action-small" onclick="navegarGoogleMaps(${i})" style="background: rgba(35, 134, 54, 0.2); color: #2ea043; border: 1px solid #2ea043; font-weight: 700;">
                                 🗺️ Maps
                             </button>
-                            <button class="btn-action-small" onclick="navegarParada(${i})" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
-                                🧭 Padrão
+                            <button class="btn-action-small ${isEntregue ? 'btn-desfazer-parada' : 'btn-finalizar-parada'}" onclick="alternarFinalizarParada(${i})">
+                                ${isEntregue ? '↩️ Desfazer' : '✅ Finalizar'}
                             </button>
-                            <button class="btn-action-small" onclick="testarBipeCodigo('${p.pacotes[0] ? p.pacotes[0].id : ''}')" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
+                            <button class="btn-action-small" onclick="testarBipeCodigo('${p.pacotes && p.pacotes[0] ? p.pacotes[0].id : ''}')" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
                                 🏷️ Bipar
                             </button>
                         </div>
@@ -1503,17 +1780,6 @@
             }
         }
 
-        function navegarParada(index) {
-            let p = rotaAtual[index];
-            if (!p) return;
-            let endCompleto = `${p.endereco}, ${p.bairro || ''}, ${p.cidade || 'Campinas'}`;
-            if (window.Android && window.Android.abrirNavegacao) {
-                window.Android.abrirNavegacao(p.lat || 0, p.lng || 0, endCompleto, 'chooser');
-            } else {
-                navegarGoogleMaps(index);
-            }
-        }
-
         // Render Vehicle Zones
         function renderizarZonasCarro() {
             let htmlFrente = '', htmlMeio = '', htmlMala = '';
@@ -1521,12 +1787,16 @@
             let total = rotaAtual.length;
 
             rotaAtual.forEach((p, i) => {
-                let pkgsBrief = p.pacotes.map(pkg => `<span class="package-tag-highlight" style="font-size: 11px;">${pkg.final || pkg.id}</span>`).join(' ');
+                let isEntregue = !!p.finalizada;
+                let pkgsBrief = (p.pacotes || []).map(pkg => `<span class="package-tag-highlight" style="font-size: 11px;">${pkg.final || pkg.id}</span>`).join(' ');
                 let cardHtml = `
-                    <div class="card" style="margin-bottom: 6px; padding: 10px 12px;">
+                    <div class="card" style="margin-bottom: 6px; padding: 10px 12px; ${isEntregue ? 'border-left: 4px solid var(--emerald); background: rgba(16, 185, 129, 0.05);' : ''}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <b>#${i + 1} - ${p.destinatario || 'Cliente'}</b>
-                            <span style="font-size: 11px; color: var(--text-muted);">${p.pacotes.length} pacote(s)</span>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                ${isEntregue ? '<span class="stop-delivered-badge">✅ ENTREGUE</span>' : ''}
+                                <span style="font-size: 11px; color: var(--text-muted);">${p.pacotes ? p.pacotes.length : 0} pacote(s)</span>
+                            </div>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin: 2px 0 6px 0;">
                             ${p.endereco}
@@ -1535,6 +1805,7 @@
                         <div style="display: flex; gap: 6px; margin-top: 6px;">
                             <button onclick="navegarWaze(${i})" style="padding: 4px 8px; font-size: 11px; background: rgba(47, 129, 247, 0.2); color: #58a6ff; border: 1px solid #58a6ff; border-radius: 4px; cursor: pointer; font-weight: bold;">🚗 Waze</button>
                             <button onclick="navegarGoogleMaps(${i})" style="padding: 4px 8px; font-size: 11px; background: rgba(35, 134, 54, 0.2); color: #2ea043; border: 1px solid #2ea043; border-radius: 4px; cursor: pointer; font-weight: bold;">🗺️ Maps</button>
+                            <button onclick="alternarFinalizarParada(${i})" style="padding: 4px 8px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; ${isEntregue ? 'background: #6b7280; color: #fff;' : 'background: #10b981; color: #fff;'}">${isEntregue ? '↩️ Desfazer' : '✅ Entregar'}</button>
                         </div>
                     </div>
                 `;
@@ -1551,17 +1822,36 @@
                 }
             });
 
-            document.getElementById('list-zona-frente').innerHTML = htmlFrente || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
-            document.getElementById('list-zona-meio').innerHTML = htmlMeio || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
-            document.getElementById('list-zona-mala').innerHTML = htmlMala || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
+            const elFrente = document.getElementById('list-zona-frente');
+            const elMeio = document.getElementById('list-zona-meio');
+            const elMala = document.getElementById('list-zona-mala');
 
-            document.getElementById('badge-count-frente').innerText = `${countFrente} paradas`;
-            document.getElementById('badge-count-meio').innerText = `${countMeio} paradas`;
-            document.getElementById('badge-count-mala').innerText = `${countMala} paradas`;
+            if (elFrente) elFrente.innerHTML = htmlFrente || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
+            if (elMeio) elMeio.innerHTML = htmlMeio || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
+            if (elMala) elMala.innerHTML = htmlMala || '<div style="color: var(--text-muted); font-size: 12px; padding: 6px;">Nenhuma parada nesta zona.</div>';
+
+            const bFrente = document.getElementById('badge-count-frente');
+            const bMeio = document.getElementById('badge-count-meio');
+            const bMala = document.getElementById('badge-count-mala');
+            if (bFrente) bFrente.innerText = `${countFrente} paradas`;
+            if (bMeio) bMeio.innerText = `${countMeio} paradas`;
+            if (bMala) bMala.innerText = `${countMala} paradas`;
         }
 
-        // Custom Leaflet Pin Icon
-        function criarPinCustomizado(numero, total) {
+        // Custom Leaflet Pin Icon (Verde com Checkmark se entregue!)
+        function criarPinCustomizado(numero, total, isFinalizada) {
+            if (isFinalizada) {
+                return L.divIcon({
+                    className: 'custom-pin-container',
+                    html: `<div class="custom-pin-inner custom-pin-delivered">
+                        <span style="font-size: 12px; font-weight: 900;">✓</span>
+                    </div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28],
+                    popupAnchor: [0, -28]
+                });
+            }
+
             let bg = '#238636'; // Verde Frente
             let textCol = '#fff';
             if (numero > Math.ceil((2 * total) / 3)) {
@@ -1583,7 +1873,7 @@
             });
         }
 
-        // Render Map with Route
+        // Render Map with Route and Popups containing Finalizar Parada
         function renderizarMapa() {
             initMap();
             if (!map) return;
@@ -1600,13 +1890,22 @@
                 if (p.lat && p.lng) {
                     let pos = [p.lat, p.lng];
                     latlngs.push(pos);
+                    let isEntregue = !!p.finalizada;
                     
                     let popupContent = `
-                        <div style="color: #000; font-family: sans-serif; min-width: 170px;">
-                            <div style="font-weight: 800; font-size: 14px; color: #2f81f7;">#${i + 1} - ${p.destinatario || 'Destinatário'}</div>
-                            <div style="font-size: 12px; margin: 4px 0;">${p.endereco}</div>
-                            <div style="font-size: 11px; color: #555;">Pacote: <b>${p.pacotes[0]?.final || p.pacotes[0]?.id}</b> (${p.zona || 'Zona'})</div>
-                            <div style="display: flex; gap: 4px; margin-top: 6px;">
+                        <div style="color: #000; font-family: sans-serif; min-width: 190px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-weight: 800; font-size: 14px; color: ${isEntregue ? '#10b981' : '#2f81f7'};">
+                                    #${i + 1} - ${p.destinatario || 'Destinatário'}
+                                </div>
+                                ${isEntregue ? '<span style="background: #10b981; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">ENTREGUE</span>' : ''}
+                            </div>
+                            <div style="font-size: 12px; margin: 4px 0; color: #333;">${p.endereco}</div>
+                            <div style="font-size: 11px; color: #666; margin-bottom: 6px;">
+                                Pacote: <b>${p.pacotes && p.pacotes[0] ? (p.pacotes[0].final || p.pacotes[0].id) : 'Padrão'}</b> (${p.zona || 'Zona'})
+                            </div>
+                            
+                            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
                                 <button onclick="navegarWaze(${i})" style="flex: 1; padding: 6px 4px; background: #33ccff; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px;">
                                     🚗 Waze
                                 </button>
@@ -1614,10 +1913,14 @@
                                     🗺️ Maps
                                 </button>
                             </div>
+
+                            <button onclick="alternarFinalizarParada(${i})" style="width: 100%; padding: 7px 4px; border: none; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: 11px; ${isEntregue ? 'background: #6b7280; color: #fff;' : 'background: #10b981; color: #fff;'}">
+                                ${isEntregue ? '↩️ Desfazer Entrega' : '✅ Finalizar Parada'}
+                            </button>
                         </div>
                     `;
 
-                    let icon = criarPinCustomizado(i + 1, total);
+                    let icon = criarPinCustomizado(i + 1, total, isEntregue);
                     let m = L.marker(pos, { icon: icon }).addTo(map).bindPopup(popupContent);
                     markers.push(m);
                 }
@@ -1625,7 +1928,7 @@
 
             if (latlngs.length > 0) {
                 let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-                let tempoEstimadoHoras = (distTotal / 18).toFixed(1); // Média de 18km/h entregas urbanas
+                let tempoEstimadoHoras = (distTotal / 18).toFixed(1);
 
                 if (isRotaOtimizada) {
                     polylineOtimizada = L.polyline(latlngs, {
@@ -1648,9 +1951,9 @@
                         opacity: 0.8
                     }).addTo(map);
 
-                    document.getElementById('map-route-title').innerText = `⚠️ Rota Bruta da Tela (${rotaAtual.length} paradas)`;
+                    document.getElementById('map-route-title').innerText = `⚠️ Rota Bruta (${rotaAtual.length} paradas)`;
                     document.getElementById('map-route-title').style.color = '#da3633';
-                    document.getElementById('map-route-sub').innerText = `Ordem desordenada com zigue-zague | Clique em Otimizar!`;
+                    document.getElementById('map-route-sub').innerText = `Ordem desordenada com cruzamentos`;
                     document.getElementById('map-route-badge').innerText = `${distTotal} km`;
                     document.getElementById('map-route-badge').style.color = '#da3633';
                 }
@@ -1660,9 +1963,299 @@
         }
 
         // -------------------------------------------------------------
-        // DATASET REAL: 11 PARADAS DO ENVIOS EXTRA (FOTOS DO MOTORISTA)
-        // 62 Unidades no veículo, 11 paradas em Campinas (Guanabara/Taquaral/Cambuí)
+        // HUB DE ROTAS: GESTÃO COMPARTILHADA NO FIREBASE (AUTO-SAVE)
         // -------------------------------------------------------------
+        function salvarEstadoRotaAtivaNoBanco() {
+            if (!rotaAtivaId || rotaAtual.length === 0) return;
+            let concluidas = rotaAtual.filter(p => p.finalizada).length;
+            let total = rotaAtual.length;
+            let status = (concluidas === total && total > 0) ? "finalizada" : (rotaAtivaMeta.status || "em_andamento");
+
+            rotaAtivaMeta.paradas_finalizadas = concluidas;
+            rotaAtivaMeta.status = status;
+
+            let rotaObj = {
+                id: rotaAtivaId,
+                titulo: rotaAtivaMeta.titulo || ("Rota " + new Date().toLocaleDateString('pt-BR')),
+                criado_em: rotaAtivaMeta.criado_em || Date.now(),
+                criado_em_str: rotaAtivaMeta.criado_em_str || new Date().toLocaleString('pt-BR'),
+                status: status,
+                total_paradas: total,
+                total_pacotes: rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0),
+                paradas_finalizadas: concluidas,
+                distancia_km: parseFloat(calcularDistanciaTotalRota(rotaAtual).toFixed(1)),
+                paradas: rotaAtual
+            };
+
+            if (window.Android && window.Android.salvarRotaAuto) {
+                window.Android.salvarRotaAuto(rotaAtivaId, JSON.stringify(rotaObj));
+            }
+        }
+
+        function recarregarRotasNuvem() {
+            const statusEl = document.getElementById('sync-rotas-status');
+            if (statusEl) { statusEl.innerText = "🔄 Sincronizando..."; statusEl.style.color = "var(--ml-yellow)"; }
+            if (window.Android && window.Android.listarRotasNuvem) {
+                window.Android.listarRotasNuvem();
+            } else {
+                window.receberListaRotasFirebase(todasRotasNuvem, true, "OK");
+            }
+        }
+
+        window.receberListaRotasFirebase = function(data, success, msg) {
+            const container = document.getElementById('lista-rotas-container');
+            const counterEl = document.getElementById('total-rotas-contador');
+            const statusEl = document.getElementById('sync-rotas-status');
+
+            if (!success) {
+                if (container) container.innerHTML = `<div class="card" style="text-align: center; color: #ef4444; padding: 20px;">Falha ao carregar rotas: ${msg}</div>`;
+                if (statusEl) { statusEl.innerText = "⚠️ Erro Conexão"; statusEl.style.color = "#ef4444"; }
+                return;
+            }
+
+            if (statusEl) { statusEl.innerText = "● Sincronizado ao vivo"; statusEl.style.color = "#10b981"; }
+
+            let rotasObj = {};
+            if (typeof data === 'string') {
+                try { rotasObj = JSON.parse(data); } catch (e) { rotasObj = {}; }
+            } else if (typeof data === 'object' && data !== null) {
+                rotasObj = data;
+            }
+
+            todasRotasNuvem = rotasObj;
+
+            let lista = [];
+            for (let key in rotasObj) {
+                let item = rotasObj[key];
+                if (item && typeof item === 'object') {
+                    if (!item.id) item.id = key;
+                    if (key === 'atual' && item.paradas) {
+                        item.titulo = item.titulo || "Rota Salva Anterior";
+                    }
+                    if (item.paradas || item.total_paradas) {
+                        lista.push(item);
+                    }
+                }
+            }
+
+            lista.sort((a, b) => (b.criado_em || b.atualizado_em || 0) - (a.criado_em || a.atualizado_em || 0));
+
+            if (counterEl) counterEl.innerText = lista.length;
+
+            if (lista.length === 0) {
+                if (container) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">☁️</div>
+                            <div style="font-size: 15px; font-weight: bold; color: var(--text-main); margin-bottom: 4px;">Nenhuma rota no banco ainda</div>
+                            <div style="font-size: 12px; margin-bottom: 14px;">Crie uma rota abaixo. Ela será salva na nuvem e aparecerá em todos os celulares!</div>
+                            <button class="btn-big-scan" style="max-width: 250px; margin: 0 auto; padding: 10px; font-size: 14px;" onclick="abrirModalCriarRota()">
+                                ➕ Criar Nova Rota
+                            </button>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            let html = '';
+            lista.forEach(r => {
+                let isAtiva = (rotaAtivaId === r.id);
+                let totalParadas = r.total_paradas || (r.paradas ? r.paradas.length : 0);
+                let totalPacotes = r.total_pacotes || (r.paradas ? r.paradas.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0) : 0);
+                let concluidas = r.paradas_finalizadas !== undefined ? r.paradas_finalizadas : (r.paradas ? r.paradas.filter(p => p.finalizada).length : 0);
+                let percent = totalParadas > 0 ? Math.round((concluidas / totalParadas) * 100) : 0;
+                let isFinalizada = (r.status === "finalizada" || (concluidas === totalParadas && totalParadas > 0));
+                let dataStr = r.criado_em_str || (r.data_hora ? r.data_hora : (r.criado_em ? new Date(r.criado_em).toLocaleString('pt-BR') : 'Data recente'));
+
+                html += `
+                    <div class="route-card ${isFinalizada ? 'finalizada' : ''}" style="${isAtiva ? 'border: 2px solid var(--ml-blue);' : ''}">
+                        <div class="route-card-header">
+                            <div>
+                                <div class="route-card-title">${r.titulo || 'Rota sem título'}</div>
+                                <div class="route-card-meta">
+                                    <span>📅 ${dataStr}</span>
+                                    ${r.dispositivo ? '<span>📱 ' + r.dispositivo + '</span>' : ''}
+                                </div>
+                            </div>
+                            <span class="route-card-status-badge ${isFinalizada ? 'finalizada' : 'em_andamento'}">
+                                ${isFinalizada ? '🏁 Concluída' : '🟢 Em Andamento'}
+                            </span>
+                        </div>
+
+                        <div class="route-card-stats">
+                            <div class="route-stat-item">
+                                <div class="route-stat-val" style="color: var(--ml-yellow);">${totalParadas}</div>
+                                <div class="route-stat-lbl">Paradas</div>
+                            </div>
+                            <div class="route-stat-item">
+                                <div class="route-stat-val">${totalPacotes}</div>
+                                <div class="route-stat-lbl">Pacotes</div>
+                            </div>
+                            <div class="route-stat-item">
+                                <div class="route-stat-val" style="color: #10b981;">${concluidas}/${totalParadas}</div>
+                                <div class="route-stat-lbl">Entregues</div>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: ${percent}%;"></div>
+                        </div>
+
+                        <div class="route-card-actions">
+                            <button class="btn-route-action primary" onclick="abrirRotaNuvem('${r.id}')">
+                                ${isAtiva ? '📍 Em Uso (Abrir)' : '🚀 Abrir Rota'}
+                            </button>
+                            <button class="btn-route-action ${isFinalizada ? 'success' : ''}" onclick="alternarStatusRotaCard('${r.id}', '${isFinalizada ? 'em_andamento' : 'finalizada'}')">
+                                ${isFinalizada ? '↩️ Reabrir' : '🏁 Finalizar'}
+                            </button>
+                            <button class="btn-route-action danger" onclick="excluirRotaNuvem('${r.id}', '${(r.titulo || '').replace(/'/g, "\\'")}')">
+                                🗑️ Excluir
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (container) container.innerHTML = html;
+        };
+
+        function abrirRotaNuvem(rotaId) {
+            let rotaObj = todasRotasNuvem[rotaId];
+            if (!rotaObj) {
+                showToast("Rota não encontrada!");
+                return;
+            }
+
+            rotaAtivaId = rotaId;
+            rotaAtivaMeta = {
+                id: rotaObj.id || rotaId,
+                titulo: rotaObj.titulo || "Rota sem título",
+                criado_em: rotaObj.criado_em || Date.now(),
+                criado_em_str: rotaObj.criado_em_str || "",
+                status: rotaObj.status || "em_andamento",
+                total_paradas: rotaObj.total_paradas || 0,
+                total_pacotes: rotaObj.total_pacotes || 0,
+                paradas_finalizadas: rotaObj.paradas_finalizadas || 0
+            };
+
+            let paradas = rotaObj.paradas || [];
+            rotaBrutaOriginal = paradas.map(p => ({ ...p }));
+            rotaAtual = paradas.map(p => ({ ...p }));
+            isRotaOtimizada = true;
+
+            pacotesBipados.clear();
+            rotaAtual.forEach(p => {
+                if (p.pacotes) {
+                    p.pacotes.forEach(pkg => {
+                        if (pkg.conferido || p.finalizada) pacotesBipados.add(pkg.id);
+                    });
+                }
+            });
+
+            let banner = document.getElementById('banner-rota-ativa');
+            if (banner) {
+                banner.style.display = 'block';
+                document.getElementById('banner-rota-ativa-nome').innerText = rotaAtivaMeta.titulo;
+            }
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            renderizarMapa();
+            switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
+
+            showToast(`🚀 Rota "${rotaAtivaMeta.titulo}" carregada com sucesso!`);
+            if (!isAudioMuted && window.Android && window.Android.speak) {
+                window.Android.speak(`Rota ${rotaAtivaMeta.titulo} aberta.`);
+            }
+        }
+
+        function alternarStatusRotaCard(rotaId, novoStatus) {
+            if (rotaAtivaId === rotaId) {
+                alternarFinalizarRotaAtiva();
+                return;
+            }
+            if (window.Android && window.Android.finalizarRotaNuvem) {
+                window.Android.finalizarRotaNuvem(rotaId, novoStatus);
+            }
+        }
+
+        function excluirRotaNuvem(rotaId, titulo) {
+            if (confirm(`Deseja realmente excluir a rota "${titulo || rotaId}" do banco de dados na nuvem?\n\nEla será apagada permanentemente de todos os celulares.`)) {
+                if (rotaAtivaId === rotaId) {
+                    rotaAtivaId = null;
+                    rotaAtual = [];
+                    rotaBrutaOriginal = [];
+                    document.getElementById('banner-rota-ativa').style.display = 'none';
+                    renderizarParadas();
+                    renderizarMapa();
+                }
+                if (window.Android && window.Android.excluirRotaNuvem) {
+                    window.Android.excluirRotaNuvem(rotaId);
+                } else {
+                    delete todasRotasNuvem[rotaId];
+                    window.receberListaRotasFirebase(todasRotasNuvem, true, "Excluído");
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // CARREGAMENTO E CRIAÇÃO AUTOMÁTICA DE ROTAS
+        // -------------------------------------------------------------
+        window.carregarRota = function(paradas, rotaIdOpcional, tituloOpcional) {
+            if (typeof paradas === 'string') {
+                try { paradas = JSON.parse(paradas); } catch (e) { return; }
+            }
+            if (!Array.isArray(paradas) || paradas.length === 0) return;
+
+            rotaBrutaOriginal = paradas.map(p => ({ ...p }));
+            rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
+            isRotaOtimizada = true;
+
+            pacotesBipados.clear();
+            historicoBipes = [];
+
+            let agora = new Date();
+            let dataHoraStr = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            let idRota = rotaIdOpcional || ("rota_" + agora.getTime());
+            let tituloRota = tituloOpcional || `Rota ${dataHoraStr} (${rotaAtual.length} paradas)`;
+
+            rotaAtivaId = idRota;
+            rotaAtivaMeta = {
+                id: idRota,
+                titulo: tituloRota,
+                criado_em: agora.getTime(),
+                criado_em_str: dataHoraStr,
+                status: "em_andamento",
+                total_paradas: rotaAtual.length,
+                total_pacotes: rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0),
+                paradas_finalizadas: 0
+            };
+
+            let banner = document.getElementById('banner-rota-ativa');
+            if (banner) {
+                banner.style.display = 'block';
+                document.getElementById('banner-rota-ativa-nome').innerText = rotaAtivaMeta.titulo;
+            }
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            renderizarMapa();
+            switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
+
+            let totalPacotes = rotaAtivaMeta.total_pacotes;
+            showToast(`🚀 Rota criada e salva no banco! (${rotaAtual.length} paradas)`);
+            if (!isAudioMuted && window.Android && window.Android.speak) {
+                window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
+            }
+
+            // AUTO-SAVE DIRETO NO FIREBASE (SEM PRECISAR DE BOTÃO SALVAR)
+            salvarEstadoRotaAtivaNoBanco();
+        };
+
+        // Datasets Prontos
         function obter11ParadasEnviosExtra() {
             return [
                 {
@@ -1675,6 +2268,8 @@
                     cep: "13076011",
                     lat: -22.8872,
                     lng: -47.0658,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: [
                         { id: "NX215_1", final: "215_1", etiqueta: "#NX215_1", conferido: false }
                     ]
@@ -1689,6 +2284,8 @@
                     cep: "13023191",
                     lat: -22.8912,
                     lng: -47.0664,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 8 }, (_, i) => ({
                         id: `NX215_2_${i + 1}`,
                         final: "215_2",
@@ -1706,6 +2303,8 @@
                     cep: "13076010",
                     lat: -22.8821,
                     lng: -47.0573,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 17 }, (_, i) => ({
                         id: `NX215_3_${i + 1}`,
                         final: "215_3",
@@ -1723,6 +2322,8 @@
                     cep: "13076150",
                     lat: -22.8804,
                     lng: -47.0601,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 2 }, (_, i) => ({
                         id: `NX215_4_${i + 1}`,
                         final: "215_4",
@@ -1740,6 +2341,8 @@
                     cep: "13076112",
                     lat: -22.8842,
                     lng: -47.0544,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 9 }, (_, i) => ({
                         id: `NX215_5_${i + 1}`,
                         final: "215_5",
@@ -1757,6 +2360,8 @@
                     cep: "13020432",
                     lat: -22.8890,
                     lng: -47.0630,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 11 }, (_, i) => ({
                         id: `NX215_6_${i + 1}`,
                         final: "215_6",
@@ -1766,7 +2371,7 @@
                 },
                 {
                     parada_num: 7,
-                    destinatario: "Condomínio Horizon Residence Premium",
+                    destinatario: "Condomínio Horizon Residence",
                     endereco: "Rua São Salvador 220",
                     complemento: "",
                     bairro: "Taquaral",
@@ -1774,6 +2379,8 @@
                     cep: "13076904",
                     lat: -22.8835,
                     lng: -47.0562,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 7 }, (_, i) => ({
                         id: `NX215_7_${i + 1}`,
                         final: "215_7",
@@ -1791,6 +2398,8 @@
                     cep: "13076590",
                     lat: -22.8856,
                     lng: -47.0618,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: Array.from({ length: 5 }, (_, i) => ({
                         id: `NX215_8_${i + 1}`,
                         final: "215_8",
@@ -1808,6 +2417,8 @@
                     cep: "13073076",
                     lat: -22.8792,
                     lng: -47.0728,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: [
                         { id: "NX215_9", final: "215_9", etiqueta: "#NX215_9", conferido: false }
                     ]
@@ -1822,6 +2433,8 @@
                     cep: "13076690",
                     lat: -22.8848,
                     lng: -47.0588,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: [
                         { id: "NX215_10", final: "215_10", etiqueta: "#NX215_10", conferido: false }
                     ]
@@ -1836,6 +2449,8 @@
                     cep: "13025320",
                     lat: -22.8953,
                     lng: -47.0487,
+                    finalizada: false,
+                    finalizadaEm: null,
                     pacotes: [
                         { id: "NX215_11", final: "215_11", etiqueta: "#NX215_11", conferido: false }
                     ]
@@ -1843,152 +2458,76 @@
             ];
         }
 
-        function carregar11ParadasEnviosExtra(otimizarAutomatico) {
-            rotaBrutaOriginal = obter11ParadasEnviosExtra();
-            if (otimizarAutomatico) {
-                rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
-                isRotaOtimizada = true;
-            } else {
-                rotaAtual = rotaBrutaOriginal.map(p => ({ ...p }));
-                isRotaOtimizada = false;
-            }
-
-            pacotesBipados.clear();
-            historicoBipes = [];
-
-            atualizarEstatisticas();
-            renderizarParadas();
-            renderizarZonasCarro();
-            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3]);
-            renderizarMapa();
-
-            let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-            showToast(`11 paradas dos Envios Extra carregadas (62 pacotes no carro)!`);
-            if (window.Android && window.Android.speak) {
-                window.Android.speak(`11 paradas do percurso carregadas. 62 pacotes no veículo.`);
-            }
+        function criarRotaReal11Paradas() {
+            let agora = new Date();
+            let dataHoraStr = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            let titulo = `Envios Extra Taquaral/Guanabara - ${dataHoraStr}`;
+            let paradas = obter11ParadasEnviosExtra();
+            window.carregarRota(paradas, "rota_extra_" + agora.getTime(), titulo);
         }
 
-        // -------------------------------------------------------------
-        // DATASET REAL: 40 PARADAS NA REGIÃO DE CAMPINAS - SP
-        // -------------------------------------------------------------
         function obter40ParadasCampinas() {
-            // Conjunto realista de 40 paradas agrupadas na região sudoeste / oeste / central de Campinas
-            // Inclui a foto real: Valdineia Mendes, Rua Umberto Vetoratto, 170 (ID: 48314806075, Final: 06075)
             return [
-                { parada_num: 1, destinatario: "Valdineia Bandeira Mendes", endereco: "Rua Umberto Vetoratto, 170", complemento: "Fundos", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060012", lat: -22.9234, lng: -47.1123, pacotes: [{ id: "48314806075", final: "06075", etiqueta: "#NX394_01", conferido: false }] },
-                { parada_num: 2, destinatario: "Marcos Aurelio Silva", endereco: "Rua Visconde de Taunay, 340", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023200", lat: -22.8940, lng: -47.0650, pacotes: [{ id: "48314806076", final: "06076", etiqueta: "#NX394_02", conferido: false }] },
-                { parada_num: 3, destinatario: "Carlos Eduardo Silva", endereco: "Av. John Boyd Dunlop, 1500", complemento: "Apto 32", bairro: "Jardim Ipaussurama", cidade: "Campinas", cep: "13060803", lat: -22.9198, lng: -47.1089, pacotes: [{ id: "48314806077", final: "06077", etiqueta: "#NX394_03", conferido: false }] },
-                { parada_num: 4, destinatario: "Patricia Souza Lima", endereco: "Rua Carolina Florence, 920", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073076", lat: -22.8790, lng: -47.0730, pacotes: [{ id: "48314806078", final: "06078", etiqueta: "#NX394_04", conferido: false }] },
-                { parada_num: 5, destinatario: "Sylvio Moro Junior", endereco: "Rua Sylvio Moro, 85", complemento: "Casa", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060020", lat: -22.9242, lng: -47.1135, pacotes: [{ id: "48314806079", final: "06079", etiqueta: "#NX394_05", conferido: false }] },
-                { parada_num: 6, destinatario: "Lucas Prado Ferreira", endereco: "Rua Maria Monteiro, 820", complemento: "Apto 101", bairro: "Cambuí", cidade: "Campinas", cep: "13025151", lat: -22.8975, lng: -47.0505, pacotes: [{ id: "48314806080", final: "06080", etiqueta: "#NX394_06", conferido: false }] },
-                { parada_num: 7, destinatario: "José dos Reis Santos", endereco: "Rua José dos Reis, 210", complemento: "", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060030", lat: -22.9251, lng: -47.1118, pacotes: [{ id: "48314806081", final: "06081", etiqueta: "#NX394_07", conferido: false }] },
-                { parada_num: 8, destinatario: "Roberto Almeida Junior", endereco: "Rua Barão de Jaguara, 890", complemento: "Sala 12", bairro: "Centro", cidade: "Campinas", cep: "13015001", lat: -22.9056, lng: -47.0608, pacotes: [{ id: "48314806082", final: "06082", etiqueta: "#NX394_08", conferido: false }] },
-                { parada_num: 9, destinatario: "Amanda Cristina Rocha", endereco: "Rua Piracicaba, 340", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050510", lat: -22.9280, lng: -47.1050, pacotes: [{ id: "48314806083", final: "06083", etiqueta: "#NX394_09", conferido: false }] },
-                { parada_num: 10, destinatario: "Fernando Henrique Lima", endereco: "Av. Heitor Penteado, 1500", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13087000", lat: -22.8750, lng: -47.0530, pacotes: [{ id: "48314806084", final: "06084", etiqueta: "#NX394_10", conferido: false }] },
-                { parada_num: 11, destinatario: "Renata Oliveira Castro", endereco: "Rua Americana, 125", complemento: "Casa 2", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050520", lat: -22.9295, lng: -47.1030, pacotes: [{ id: "48314806085", final: "06085", etiqueta: "#NX394_11", conferido: false }] },
-                { parada_num: 12, destinatario: "Thiago Goncalves Dias", endereco: "Rua Proença, 830", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026300", lat: -22.9110, lng: -47.0500, pacotes: [{ id: "48314806086", final: "06086", etiqueta: "#NX394_12", conferido: false }] },
-                { parada_num: 13, destinatario: "Bruna Martins Vieira", endereco: "Rua Limeira, 450", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050530", lat: -22.9310, lng: -47.1010, pacotes: [{ id: "48314806087", final: "06087", etiqueta: "#NX394_13", conferido: false }] },
-                { parada_num: 14, destinatario: "Gustavo Barbosa Reis", endereco: "Rua Coronel Quirino, 1550", complemento: "", bairro: "Cambuí", cidade: "Campinas", cep: "13025002", lat: -22.8990, lng: -47.0520, pacotes: [{ id: "48314806088", final: "06088", etiqueta: "#NX394_14", conferido: false }] },
-                { parada_num: 15, destinatario: "Rodrigo Sanches Alves", endereco: "Av. das Amoreiras, 2100", complemento: "Comércio", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036225", lat: -22.9220, lng: -47.0850, pacotes: [{ id: "48314806089", final: "06089", etiqueta: "#NX394_15", conferido: false }] },
-                { parada_num: 16, destinatario: "Mariana Santos Oliveira", endereco: "Rua José Ferreira de Camargo, 420", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092105", lat: -22.8985, lng: -47.0456, pacotes: [{ id: "48314806090", final: "06090", etiqueta: "#NX394_16", conferido: false }] },
-                { parada_num: 17, destinatario: "Felipe Nogueira Dias", endereco: "Rua Thomaz Alva Edison, 310", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036020", lat: -22.9240, lng: -47.0830, pacotes: [{ id: "48314806091", final: "06091", etiqueta: "#NX394_17", conferido: false }] },
-                { parada_num: 18, destinatario: "Claudia Regina Soares", endereco: "Rua General Osório, 1200", complemento: "Edifício Central", bairro: "Centro", cidade: "Campinas", cep: "13010111", lat: -22.9040, lng: -47.0585, pacotes: [{ id: "48314806092", final: "06092", etiqueta: "#NX394_18", conferido: false }] },
-                { parada_num: 19, destinatario: "Diego Henrique Pires", endereco: "Rua Pereira Barreto, 180", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036050", lat: -22.9255, lng: -47.0815, pacotes: [{ id: "48314806093", final: "06093", etiqueta: "#NX394_19", conferido: false }] },
-                { parada_num: 20, destinatario: "Luciana Morais Costa", endereco: "Av. Barão de Itapura, 2100", complemento: "Sala 4", bairro: "Guanabara", cidade: "Campinas", cep: "13020432", lat: -22.8890, lng: -47.0630, pacotes: [{ id: "48314806094", final: "06094", etiqueta: "#NX394_20", conferido: false }] },
-                { parada_num: 21, destinatario: "Marcelo Tavares Brito", endereco: "Rua Dr. Carlos de Campos, 520", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035210", lat: -22.9150, lng: -47.0720, pacotes: [{ id: "48314806095", final: "06095", etiqueta: "#NX394_21", conferido: false }] },
-                { parada_num: 22, destinatario: "Vanessa Correia Ramos", endereco: "Av. Brasil, 1350", complemento: "", bairro: "Jardim Guanabara", cidade: "Campinas", cep: "13070178", lat: -22.8870, lng: -47.0690, pacotes: [{ id: "48314806096", final: "06096", etiqueta: "#NX394_22", conferido: false }] },
-                { parada_num: 23, destinatario: "Eduardo Macedo Fontes", endereco: "Rua Francisco Teodoro, 620", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035300", lat: -22.9125, lng: -47.0690, pacotes: [{ id: "48314806097", final: "06097", etiqueta: "#NX394_23", conferido: false }] },
-                { parada_num: 24, destinatario: "Aline Cristina Duarte", endereco: "Rua Tiradentes, 750", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023191", lat: -22.8910, lng: -47.0660, pacotes: [{ id: "48314806098", final: "06098", etiqueta: "#NX394_24", conferido: false }] },
-                { parada_num: 25, destinatario: "Sergio Murilo Camargo", endereco: "Rua Barreto Leme, 1600", complemento: "Apto 42", bairro: "Centro", cidade: "Campinas", cep: "13010201", lat: -22.9020, lng: -47.0620, pacotes: [{ id: "48314806099", final: "06099", etiqueta: "#NX394_25", conferido: false }] },
-                { parada_num: 26, destinatario: "Juliana Mendes Garcia", endereco: "Rua Paula Bueno, 600", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076061", lat: -22.8860, lng: -47.0540, pacotes: [{ id: "48314806100", final: "06100", etiqueta: "#NX394_26", conferido: false }] },
-                { parada_num: 27, destinatario: "Fabio Henrique Viana", endereco: "Rua Sacramento, 450", complemento: "", bairro: "Centro", cidade: "Campinas", cep: "13010210", lat: -22.9035, lng: -47.0640, pacotes: [{ id: "48314806101", final: "06101", etiqueta: "#NX394_27", conferido: false }] },
-                { parada_num: 28, destinatario: "Daniela Antunes Prado", endereco: "Rua Buarque de Macedo, 1200", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073055", lat: -22.8800, lng: -47.0690, pacotes: [{ id: "48314806102", final: "06102", etiqueta: "#NX394_28", conferido: false }] },
-                { parada_num: 29, destinatario: "Igor Vasconcelos Lins", endereco: "Rua Saldanha Marinho, 980", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13013081", lat: -22.9000, lng: -47.0680, pacotes: [{ id: "48314806103", final: "06103", etiqueta: "#NX394_29", conferido: false }] },
-                { parada_num: 30, destinatario: "Camila Ribeiro Pinto", endereco: "Av. Dr. Hermas Braga, 700", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092130", lat: -22.8960, lng: -47.0430, pacotes: [{ id: "48314806104", final: "06104", etiqueta: "#NX394_30", conferido: false }] },
-                { parada_num: 31, destinatario: "Pedro Paulo Guedes", endereco: "Rua Culto à Ciência, 210", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13020060", lat: -22.8970, lng: -47.0680, pacotes: [{ id: "48314806105", final: "06105", etiqueta: "#NX394_31", conferido: false }] },
-                { parada_num: 32, destinatario: "Tatiane Cristina Neves", endereco: "Rua Santo Antonio, 240", complemento: "", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041350", lat: -22.9180, lng: -47.0550, pacotes: [{ id: "48314806106", final: "06106", etiqueta: "#NX394_32", conferido: false }] },
-                { parada_num: 33, destinatario: "Vitor Hugo Silveira", endereco: "Rua Barão de Atibaia, 560", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023010", lat: -22.8930, lng: -47.0670, pacotes: [{ id: "48314806107", final: "06107", etiqueta: "#NX394_33", conferido: false }] },
-                { parada_num: 34, destinatario: "Priscila Valente Cruz", endereco: "Rua Abolição, 1100", complemento: "Fundos", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041445", lat: -22.9210, lng: -47.0520, pacotes: [{ id: "48314806108", final: "06108", etiqueta: "#NX394_34", conferido: false }] },
-                { parada_num: 35, destinatario: "Alexandre Gusmao Paz", endereco: "Rua Frei Manoel da Ressurreição, 670", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13073221", lat: -22.8850, lng: -47.0670, pacotes: [{ id: "48314806109", final: "06109", etiqueta: "#NX394_35", conferido: false }] },
-                { parada_num: 36, destinatario: "Sabrina Leite Fagundes", endereco: "Rua Eng. Augusto de Figueiredo, 500", complemento: "", bairro: "Swift", cidade: "Campinas", cep: "13045503", lat: -22.9300, lng: -47.0450, pacotes: [{ id: "48314806110", final: "06110", etiqueta: "#NX394_36", conferido: false }] },
-                { parada_num: 37, destinatario: "Arthur Moura Carvalho", endereco: "Rua Dr. Buarque de Macedo, 450", complemento: "", bairro: "Jardim Brasil", cidade: "Campinas", cep: "13073010", lat: -22.8830, lng: -47.0700, pacotes: [{ id: "48314806111", final: "06111", etiqueta: "#NX394_37", conferido: false }] },
-                { parada_num: 38, destinatario: "Leticia Ferreira Brandao", endereco: "Av. Princesa D'Oeste, 1400", complemento: "", bairro: "Jardim Proença", cidade: "Campinas", cep: "13100040", lat: -22.9090, lng: -47.0420, pacotes: [{ id: "48314806112", final: "06112", etiqueta: "#NX394_38", conferido: false }] },
-                { parada_num: 39, destinatario: "Rogerio Ceni Moreira", endereco: "Rua Dr. Armando Sales de Oliveira, 800", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076015", lat: -22.8820, lng: -47.0580, pacotes: [{ id: "48314806113", final: "06113", etiqueta: "#NX394_39", conferido: false }] },
-                { parada_num: 40, destinatario: "Helena Beatriz Guimaraes", endereco: "Rua Uruguaiana, 350", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026001", lat: -22.9080, lng: -47.0540, pacotes: [{ id: "48314806114", final: "06114", etiqueta: "#NX394_40", conferido: false }] }
+                { parada_num: 1, destinatario: "Valdineia Bandeira Mendes", endereco: "Rua Umberto Vetoratto, 170", complemento: "Fundos", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060012", lat: -22.9234, lng: -47.1123, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806075", final: "06075", etiqueta: "#NX394_01", conferido: false }] },
+                { parada_num: 2, destinatario: "Marcos Aurelio Silva", endereco: "Rua Visconde de Taunay, 340", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023200", lat: -22.8940, lng: -47.0650, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806076", final: "06076", etiqueta: "#NX394_02", conferido: false }] },
+                { parada_num: 3, destinatario: "Carlos Eduardo Silva", endereco: "Av. John Boyd Dunlop, 1500", complemento: "Apto 32", bairro: "Jardim Ipaussurama", cidade: "Campinas", cep: "13060803", lat: -22.9198, lng: -47.1089, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806077", final: "06077", etiqueta: "#NX394_03", conferido: false }] },
+                { parada_num: 4, destinatario: "Patricia Souza Lima", endereco: "Rua Carolina Florence, 920", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073076", lat: -22.8790, lng: -47.0730, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806078", final: "06078", etiqueta: "#NX394_04", conferido: false }] },
+                { parada_num: 5, destinatario: "Sylvio Moro Junior", endereco: "Rua Sylvio Moro, 85", complemento: "Casa", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060020", lat: -22.9242, lng: -47.1135, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806079", final: "06079", etiqueta: "#NX394_05", conferido: false }] },
+                { parada_num: 6, destinatario: "Lucas Prado Ferreira", endereco: "Rua Maria Monteiro, 820", complemento: "Apto 101", bairro: "Cambuí", cidade: "Campinas", cep: "13025151", lat: -22.8975, lng: -47.0505, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806080", final: "06080", etiqueta: "#NX394_06", conferido: false }] },
+                { parada_num: 7, destinatario: "José dos Reis Santos", endereco: "Rua José dos Reis, 210", complemento: "", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060030", lat: -22.9251, lng: -47.1118, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806081", final: "06081", etiqueta: "#NX394_07", conferido: false }] },
+                { parada_num: 8, destinatario: "Roberto Almeida Junior", endereco: "Rua Barão de Jaguara, 890", complemento: "Sala 12", bairro: "Centro", cidade: "Campinas", cep: "13015001", lat: -22.9056, lng: -47.0608, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806082", final: "06082", etiqueta: "#NX394_08", conferido: false }] },
+                { parada_num: 9, destinatario: "Amanda Cristina Rocha", endereco: "Rua Piracicaba, 340", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050510", lat: -22.9280, lng: -47.1050, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806083", final: "06083", etiqueta: "#NX394_09", conferido: false }] },
+                { parada_num: 10, destinatario: "Fernando Henrique Lima", endereco: "Av. Heitor Penteado, 1500", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13087000", lat: -22.8750, lng: -47.0530, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806084", final: "06084", etiqueta: "#NX394_10", conferido: false }] },
+                { parada_num: 11, destinatario: "Renata Oliveira Castro", endereco: "Rua Americana, 125", complemento: "Casa 2", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050520", lat: -22.9295, lng: -47.1030, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806085", final: "06085", etiqueta: "#NX394_11", conferido: false }] },
+                { parada_num: 12, destinatario: "Thiago Goncalves Dias", endereco: "Rua Proença, 830", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026300", lat: -22.9110, lng: -47.0500, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806086", final: "06086", etiqueta: "#NX394_12", conferido: false }] },
+                { parada_num: 13, destinatario: "Bruna Martins Vieira", endereco: "Rua Limeira, 450", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050530", lat: -22.9310, lng: -47.1010, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806087", final: "06087", etiqueta: "#NX394_13", conferido: false }] },
+                { parada_num: 14, destinatario: "Gustavo Barbosa Reis", endereco: "Rua Coronel Quirino, 1550", complemento: "", bairro: "Cambuí", cidade: "Campinas", cep: "13025002", lat: -22.8990, lng: -47.0520, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806088", final: "06088", etiqueta: "#NX394_14", conferido: false }] },
+                { parada_num: 15, destinatario: "Rodrigo Sanches Alves", endereco: "Av. das Amoreiras, 2100", complemento: "Comércio", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036225", lat: -22.9220, lng: -47.0850, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806089", final: "06089", etiqueta: "#NX394_15", conferido: false }] },
+                { parada_num: 16, destinatario: "Mariana Santos Oliveira", endereco: "Rua José Ferreira de Camargo, 420", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092105", lat: -22.8985, lng: -47.0456, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806090", final: "06090", etiqueta: "#NX394_16", conferido: false }] },
+                { parada_num: 17, destinatario: "Felipe Nogueira Dias", endereco: "Rua Thomaz Alva Edison, 310", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036020", lat: -22.9240, lng: -47.0830, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806091", final: "06091", etiqueta: "#NX394_17", conferido: false }] },
+                { parada_num: 18, destinatario: "Claudia Regina Soares", endereco: "Rua General Osório, 1200", complemento: "Edifício Central", bairro: "Centro", cidade: "Campinas", cep: "13010111", lat: -22.9040, lng: -47.0585, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806092", final: "06092", etiqueta: "#NX394_18", conferido: false }] },
+                { parada_num: 19, destinatario: "Diego Henrique Pires", endereco: "Rua Pereira Barreto, 180", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036050", lat: -22.9255, lng: -47.0815, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806093", final: "06093", etiqueta: "#NX394_19", conferido: false }] },
+                { parada_num: 20, destinatario: "Luciana Morais Costa", endereco: "Av. Barão de Itapura, 2100", complemento: "Sala 4", bairro: "Guanabara", cidade: "Campinas", cep: "13020432", lat: -22.8890, lng: -47.0630, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806094", final: "06094", etiqueta: "#NX394_20", conferido: false }] },
+                { parada_num: 21, destinatario: "Marcelo Tavares Brito", endereco: "Rua Dr. Carlos de Campos, 520", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035210", lat: -22.9150, lng: -47.0720, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806095", final: "06095", etiqueta: "#NX394_21", conferido: false }] },
+                { parada_num: 22, destinatario: "Vanessa Correia Ramos", endereco: "Av. Brasil, 1350", complemento: "", bairro: "Jardim Guanabara", cidade: "Campinas", cep: "13070178", lat: -22.8870, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806096", final: "06096", etiqueta: "#NX394_22", conferido: false }] },
+                { parada_num: 23, destinatario: "Eduardo Macedo Fontes", endereco: "Rua Francisco Teodoro, 620", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035300", lat: -22.9125, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806097", final: "06097", etiqueta: "#NX394_23", conferido: false }] },
+                { parada_num: 24, destinatario: "Aline Cristina Duarte", endereco: "Rua Tiradentes, 750", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023191", lat: -22.8910, lng: -47.0660, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806098", final: "06098", etiqueta: "#NX394_24", conferido: false }] },
+                { parada_num: 25, destinatario: "Sergio Murilo Camargo", endereco: "Rua Barreto Leme, 1600", complemento: "Apto 42", bairro: "Centro", cidade: "Campinas", cep: "13010201", lat: -22.9020, lng: -47.0620, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806099", final: "06099", etiqueta: "#NX394_25", conferido: false }] },
+                { parada_num: 26, destinatario: "Juliana Mendes Garcia", endereco: "Rua Paula Bueno, 600", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076061", lat: -22.8860, lng: -47.0540, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806100", final: "06100", etiqueta: "#NX394_26", conferido: false }] },
+                { parada_num: 27, destinatario: "Fabio Henrique Viana", endereco: "Rua Sacramento, 450", complemento: "", bairro: "Centro", cidade: "Campinas", cep: "13010210", lat: -22.9035, lng: -47.0640, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806101", final: "06101", etiqueta: "#NX394_27", conferido: false }] },
+                { parada_num: 28, destinatario: "Daniela Antunes Prado", endereco: "Rua Buarque de Macedo, 1200", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073055", lat: -22.8800, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806102", final: "06102", etiqueta: "#NX394_28", conferido: false }] },
+                { parada_num: 29, destinatario: "Igor Vasconcelos Lins", endereco: "Rua Saldanha Marinho, 980", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13013081", lat: -22.9000, lng: -47.0680, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806103", final: "06103", etiqueta: "#NX394_29", conferido: false }] },
+                { parada_num: 30, destinatario: "Camila Ribeiro Pinto", endereco: "Av. Dr. Hermas Braga, 700", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092130", lat: -22.8960, lng: -47.0430, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806104", final: "06104", etiqueta: "#NX394_30", conferido: false }] },
+                { parada_num: 31, destinatario: "Pedro Paulo Guedes", endereco: "Rua Culto à Ciência, 210", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13020060", lat: -22.8970, lng: -47.0680, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806105", final: "06105", etiqueta: "#NX394_31", conferido: false }] },
+                { parada_num: 32, destinatario: "Tatiane Cristina Neves", endereco: "Rua Santo Antonio, 240", complemento: "", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041350", lat: -22.9180, lng: -47.0550, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806106", final: "06106", etiqueta: "#NX394_32", conferido: false }] },
+                { parada_num: 33, destinatario: "Vitor Hugo Silveira", endereco: "Rua Barão de Atibaia, 560", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023010", lat: -22.8930, lng: -47.0670, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806107", final: "06107", etiqueta: "#NX394_33", conferido: false }] },
+                { parada_num: 34, destinatario: "Priscila Valente Cruz", endereco: "Rua Abolição, 1100", complemento: "Fundos", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041445", lat: -22.9210, lng: -47.0520, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806108", final: "06108", etiqueta: "#NX394_34", conferido: false }] },
+                { parada_num: 35, destinatario: "Alexandre Gusmao Paz", endereco: "Rua Frei Manoel da Ressurreição, 670", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13073221", lat: -22.8850, lng: -47.0670, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806109", final: "06109", etiqueta: "#NX394_35", conferido: false }] },
+                { parada_num: 36, destinatario: "Sabrina Leite Fagundes", endereco: "Rua Eng. Augusto de Figueiredo, 500", complemento: "", bairro: "Swift", cidade: "Campinas", cep: "13045503", lat: -22.9300, lng: -47.0450, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806110", final: "06110", etiqueta: "#NX394_36", conferido: false }] },
+                { parada_num: 37, destinatario: "Arthur Moura Carvalho", endereco: "Rua Dr. Buarque de Macedo, 450", complemento: "", bairro: "Jardim Brasil", cidade: "Campinas", cep: "13073010", lat: -22.8830, lng: -47.0700, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806111", final: "06111", etiqueta: "#NX394_37", conferido: false }] },
+                { parada_num: 38, destinatario: "Leticia Ferreira Brandao", endereco: "Av. Princesa D'Oeste, 1400", complemento: "", bairro: "Jardim Proença", cidade: "Campinas", cep: "13100040", lat: -22.9090, lng: -47.0420, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806112", final: "06112", etiqueta: "#NX394_38", conferido: false }] },
+                { parada_num: 39, destinatario: "Rogerio Ceni Moreira", endereco: "Rua Dr. Armando Sales de Oliveira, 800", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076015", lat: -22.8820, lng: -47.0580, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806113", final: "06113", etiqueta: "#NX394_39", conferido: false }] },
+                { parada_num: 40, destinatario: "Helena Beatriz Guimaraes", endereco: "Rua Uruguaiana, 350", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026001", lat: -22.9080, lng: -47.0540, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806114", final: "06114", etiqueta: "#NX394_40", conferido: false }] }
             ];
         }
 
-        // Carregar 40 Paradas em Campinas
-        function carregar40ParadasCampinas(otimizarAutomatico) {
-            rotaBrutaOriginal = obter40ParadasCampinas();
-            
-            if (otimizarAutomatico) {
-                rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
-                isRotaOtimizada = true;
-            } else {
-                rotaAtual = rotaBrutaOriginal.map(p => ({ ...p }));
-                isRotaOtimizada = false;
-            }
-
-            pacotesBipados.clear();
-            historicoBipes = [];
-
-            atualizarEstatisticas();
-            renderizarParadas();
-            renderizarZonasCarro();
-            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3]);
-            renderizarMapa();
-
-            let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-            showToast(`${rotaAtual.length} paradas carregadas (${distTotal} km)!`);
-            if (!isAudioMuted && window.Android && window.Android.speak) {
-                window.Android.speak(`${rotaAtual.length} paradas carregadas. Total de ${distTotal} quilômetros.`);
-            }
+        function criarRotaReal40Paradas() {
+            let agora = new Date();
+            let dataHoraStr = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            let titulo = `Campinas Completa (40 Paradas) - ${dataHoraStr}`;
+            let paradas = obter40ParadasCampinas();
+            window.carregarRota(paradas, "rota_campinas_" + agora.getTime(), titulo);
         }
-
-        // Compatibilidade com chamada Kotlin nativa
-        window.carregarRota = function(paradas) {
-            if (typeof paradas === 'string') {
-                try { paradas = JSON.parse(paradas); } catch (e) { return; }
-            }
-            rotaBrutaOriginal = (paradas || []).map(p => ({ ...p }));
-            rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
-            isRotaOtimizada = true;
-            pacotesBipados.clear();
-            historicoBipes = [];
-
-            atualizarEstatisticas();
-            renderizarParadas();
-            renderizarZonasCarro();
-            renderizarMapa();
-            switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
-
-            let totalPacotes = rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0);
-            showToast(`Rota carregada com ${rotaAtual.length} paradas e ${totalPacotes} pacotes!`);
-            if (!isAudioMuted && window.Android && window.Android.speak) {
-                window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
-            }
-
-            // Sincroniza automaticamente a rota com o Firebase
-            if (window.Android && window.Android.salvarRotaFirebase) {
-                window.Android.salvarRotaFirebase(JSON.stringify(rotaAtual));
-            }
-        };
-
-        window.carregarRotaExemploReal = function() {
-            carregar40ParadasCampinas(true);
-        };
 
         // DOM Ready
         window.addEventListener('DOMContentLoaded', () => {
             initMap();
-            atualizarStatusFirebase();
             if (window.Android && window.Android.isAudioMuted) {
                 try {
                     setAudioMuted(window.Android.isAudioMuted());
                 } catch (e) {}
             }
+            recarregarRotasNuvem();
         });
     </script>
 </body>
