@@ -39,6 +39,12 @@ import java.util.*
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
+    companion object {
+        const val DEFAULT_FIREBASE_URL = "https://rotaml-41f8a-default-rtdb.firebaseio.com"
+        const val DEFAULT_FIREBASE_KEY = "NJXaaCyLXfLBP06lK7mSoSGbqJzOVQiC66ZNlOzO"
+        const val DEFAULT_FIREBASE_SALA = "rotaml-41f8a-default-rtdb"
+    }
+
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
     private var tts: TextToSpeech? = null
@@ -57,6 +63,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(binding.root)
 
         prefs = getSharedPreferences("RotaMLPrefs", Context.MODE_PRIVATE)
+        if (!prefs.contains("Firebase URL") || prefs.getString("Firebase URL", "")?.isBlank() == true) {
+            prefs.edit()
+                .putString("Firebase URL", DEFAULT_FIREBASE_URL)
+                .putString("Firebase Key", DEFAULT_FIREBASE_KEY)
+                .putString("Firebase Sala", DEFAULT_FIREBASE_SALA)
+                .apply()
+        }
         isAudioMuted = prefs.getBoolean("is_audio_muted", false)
         tts = TextToSpeech(this, this)
 
@@ -366,28 +379,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun getFirebaseBaseUrl(): String {
-        var url = prefs.getString("Firebase URL", "")?.trim() ?: ""
-        if (url.isNotBlank()) {
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                url = "https://$url"
-            }
-            if (url.endsWith("/")) {
-                url = url.substring(0, url.length - 1)
-            }
-            if (!url.contains("firebaseio.com") && !url.contains("googleapis.com")) {
-                url = "$url-default-rtdb.firebaseio.com"
-            }
+        var url = prefs.getString("Firebase URL", DEFAULT_FIREBASE_URL)?.trim() ?: DEFAULT_FIREBASE_URL
+        if (url.isBlank()) url = DEFAULT_FIREBASE_URL
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://$url"
+        }
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length - 1)
+        }
+        if (!url.contains("firebaseio.com") && !url.contains("googleapis.com")) {
+            url = "$url-default-rtdb.firebaseio.com"
         }
         return url
     }
 
     private fun getFirebaseAuthToken(): String {
-        return prefs.getString("Firebase Key", "")?.trim() ?: ""
+        val key = prefs.getString("Firebase Key", DEFAULT_FIREBASE_KEY)?.trim() ?: DEFAULT_FIREBASE_KEY
+        return if (key.isNotBlank()) key else DEFAULT_FIREBASE_KEY
     }
 
     private fun getFirebaseSala(): String {
-        val sala = prefs.getString("Firebase Sala", "rota_extra")?.trim() ?: "rota_extra"
-        return if (sala.isNotBlank()) sala else "rota_extra"
+        val sala = prefs.getString("Firebase Sala", DEFAULT_FIREBASE_SALA)?.trim() ?: DEFAULT_FIREBASE_SALA
+        return if (sala.isNotBlank()) sala else DEFAULT_FIREBASE_SALA
     }
 
     fun syncFirebaseBipe(code: String, paradaNum: Int = 0) {
@@ -592,7 +605,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setPadding(0, 16, 0, 8)
         }
 
-        fun createField(label: String, prefKey: String, hintText: String, isPassword: Boolean = false): EditText {
+        fun createField(label: String, prefKey: String, hintText: String, defaultVal: String = "", isPassword: Boolean = false): EditText {
             val tv = TextView(this).apply {
                 text = label
                 textSize = 12f
@@ -600,7 +613,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 setPadding(0, 8, 0, 4)
             }
             val et = EditText(this).apply {
-                setText(prefs.getString(prefKey, ""))
+                val current = prefs.getString(prefKey, defaultVal) ?: defaultVal
+                setText(if (current.isNotBlank()) current else defaultVal)
                 hint = hintText
                 setHintTextColor(Color.parseColor("#6B7280"))
                 textSize = 14f
@@ -618,9 +632,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         container.addView(createSectionTitle("🔥 Google Firebase Database"))
-        val editFbUrl = createField("URL do Firebase Realtime Database", "Firebase URL", "https://seu-projeto-default-rtdb.firebaseio.com")
-        val editFbKey = createField("Chave Secreta / Auth Token do Firebase", "Firebase Key", "Token ou Database Secret", isPassword = true)
-        val editFbSala = createField("Identificador da Sala / Motorista", "Firebase Sala", "ex: rota_extra_01 ou seu nome")
+        val editFbUrl = createField("URL do Firebase Realtime Database", "Firebase URL", DEFAULT_FIREBASE_URL, defaultVal = DEFAULT_FIREBASE_URL)
+        val editFbKey = createField("Chave Secreta / Auth Token do Firebase", "Firebase Key", DEFAULT_FIREBASE_KEY, defaultVal = DEFAULT_FIREBASE_KEY, isPassword = true)
+        val editFbSala = createField("Identificador da Sala / Motorista", "Firebase Sala", DEFAULT_FIREBASE_SALA, defaultVal = DEFAULT_FIREBASE_SALA)
 
         val btnTestFb = com.google.android.material.button.MaterialButton(this).apply {
             text = "🧪 Testar Conexão com Firebase"
