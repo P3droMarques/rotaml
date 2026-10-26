@@ -537,9 +537,9 @@
             <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
             Mapa
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-teste', this)">
-            <svg viewBox="0 0 24 24"><path d="M10 2v7.31L4.69 19.3A2 2 0 0 0 6.44 22h11.12a2 2 0 0 0 1.75-2.7L14 9.31V2M8.5 2h7M14 9.3a6.5 6.5 0 0 0-4 0"/></svg>
-            Testar
+        <button class="tab-btn" onclick="switchTab('tab-nuvem', this)">
+            <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            Nuvem
         </button>
     </div>
 
@@ -549,10 +549,18 @@
         <!-- TAB 1: BIPER / CONFERÊNCIA -->
         <div id="tab-biper" class="tab-content active">
             <div class="scanner-hero">
-                <div class="card-header" style="justify-content: center; margin-bottom: 4px;">
+                <div class="card-header" style="justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="card-title" style="color: var(--ml-yellow);">
                         ⚡ Scanner de Carregamento
                     </span>
+                    <div style="display: flex; gap: 6px;">
+                        <button id="btn-sound-toggle" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; font-weight: 700; color: #10b981;" onclick="toggleMuteSound()">
+                            🔊 Som
+                        </button>
+                        <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="acionarOcrGaleria()">
+                            📷 OCR
+                        </button>
+                    </div>
                 </div>
 
                 <div class="progress-stats">
@@ -588,10 +596,10 @@
                     <div class="zone-pill zone-frente" id="bipe-res-zone">🟢 FRENTE</div>
                 </div>
                 <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 2px;" id="bipe-res-recipient">
-                    Valdineia Bandeira Mendes
+                    Destinatário
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;" id="bipe-res-address">
-                    Rua Umberto Vetoratto, 170 (Fundos) - Jardim Ipiranga
+                    Endereço
                 </div>
 
                 <div style="background: var(--surface); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
@@ -611,7 +619,7 @@
                     <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="limparHistoricoBipes()">Limpar</button>
                 </div>
                 <div id="recent-bipes-list" style="font-size: 13px; color: var(--text-muted);">
-                    Nenhum pacote bipado ainda. Use o botão acima ou carregue as 40 paradas na aba Testar.
+                    Nenhum pacote bipado ainda. Toque em '1. Ler Tela' para ler a rota ou use o botão 'BIPAR ETIQUETA / QR'.
                 </div>
             </div>
         </div>
@@ -630,7 +638,7 @@
             <div id="stops-list-container">
                 <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
                     Nenhuma rota carregada no momento.<br>
-                    Vá na aba <b>"Testar"</b> para carregar as <b>40 paradas da região de Campinas</b>!
+                    Toque em <b>'1. Ler Tela'</b> no topo para ler a tela do Envios Extra ou toque em <b>📷 OCR</b> para carregar prints da galeria!
                 </div>
             </div>
         </div>
@@ -702,138 +710,109 @@
             </div>
         </div>
 
-        <!-- TAB 5: SIMULADOR & TESTES -->
-        <div id="tab-teste" class="tab-content">
-            <!-- 11 Stops Envios Extra Real Photo Button -->
+        <!-- TAB 5: NUVEM FIREBASE & FERRAMENTAS -->
+        <div id="tab-nuvem" class="tab-content">
+            <!-- Firebase Realtime Database Status Card -->
             <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1f2619, #161b22); margin-bottom: 12px;">
                 <div class="card-header">
-                    <span class="card-title" style="color: var(--ml-yellow);">
-                        ⚡ Suas 11 Paradas dos Envios Extra (Foto Real)
+                    <span class="card-title" style="color: var(--ml-yellow); display: flex; align-items: center; gap: 6px;">
+                        🔥 Google Firebase (Nuvem em Tempo Real)
                     </span>
+                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window.Android && window.Android.abrirConfiguracoes ? window.Android.abrirConfiguracoes() : alert('Abra as configurações no topo ⚙️')">
+                        ⚙️ Chaves & Config
+                    </button>
                 </div>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-                    Carrega exatamente a tela dos seus prints: <b>11 paradas, 62 unidades no veículo</b> (Guanabara, Taquaral e Cambuí: Dona Maria Umbelina Couto, Tiradentes, Alberto Cerqueira Lima, etc.).
+                    Sincronização instantânea das rotas e pacotes bipados no Google Firebase. Compartilhe o progresso e recupere rotas em qualquer celular.
                 </p>
 
-                <button class="test-btn primary" onclick="carregar11ParadasEnviosExtra(true)" style="background: rgba(255, 230, 0, 0.2); border-color: var(--ml-yellow);">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
-                            🚀 Carregar as 11 Paradas da sua Foto (Otimizadas no Mapa)
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-muted);">
-                            62 unidades no veículo organizadas por zonas do carro e menor percurso
-                        </div>
+                <div id="firebase-status-box" style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; font-size: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Banco de Dados:</span>
+                        <span id="firebase-status-label" style="font-weight: 700; color: #10b981;">● Firebase Habilitado</span>
                     </div>
-                    <span style="font-size: 18px;">▶</span>
-                </button>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Sala / Motorista:</span>
+                        <span id="firebase-sala-label" style="font-weight: 700; color: var(--ml-blue-hover);">rota_extra</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-muted);">Bipes ao vivo:</span>
+                        <span style="font-weight: 700; color: var(--ml-yellow);">⚡ Sincronização Automática</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="test-btn highlight" onclick="salvarRotaParaFirebase()" style="background: rgba(255, 230, 0, 0.15); border-color: var(--ml-yellow);">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
+                                ☁️ 1. Salvar Rota Atual no Firebase
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Faz upload de todas as paradas e status de conferência para a nuvem
+                            </div>
+                        </div>
+                        <span style="font-size: 16px;">⬆️</span>
+                    </button>
+
+                    <button class="test-btn primary" onclick="baixarRotaDoFirebase()">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-blue-hover);">
+                                📥 2. Baixar Rota Salva do Firebase
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Carrega no app a rota previamente salva por você ou pela equipe
+                            </div>
+                        </div>
+                        <span style="font-size: 16px;">⬇️</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- 40 Stops Campinas Hero Button -->
-            <div class="card" style="border: 1px solid var(--border); background: linear-gradient(145deg, #161b22, #1c2333);">
+            <!-- Route Tools & OCR Card -->
+            <div class="card" style="border: 1px solid var(--border); background: var(--surface);">
                 <div class="card-header">
-                    <span class="card-title" style="color: var(--ml-blue-hover);">
-                        🎯 Rota Alternativa: 40 Paradas em Campinas
+                    <span class="card-title" style="color: var(--text-main);">
+                        ⚡ Ferramentas de Rota & OCR
                     </span>
                 </div>
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-                    Simula a leitura de uma gaiola completa em Campinas (região do <b>Jd. Ipiranga, Campos Elíseos, Parque Industrial, Centro e Taquaral</b>).
-                </p>
 
-                <!-- Button 1: Load 40 stops raw -->
-                <button class="test-btn primary" onclick="carregar40ParadasCampinas(false)">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
-                            📦 1. Carregar 40 Paradas (Simular Leitura de Tela)
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                    <button class="test-btn" onclick="executarOtimizacaoRota()">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">
+                                🔄 Otimizar Trajeto no Mapa (Menor Percurso)
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Elimina cruzamentos desnecessários e organiza sequência de 1 a N
+                            </div>
                         </div>
-                        <div style="font-size: 11px; color: var(--text-muted);">
-                            Carrega os 40 pacotes com dados completos na ordem original da tela
-                        </div>
-                    </div>
-                    <span style="font-size: 16px;">▶</span>
-                </button>
+                        <span style="font-size: 16px;">🗺️</span>
+                    </button>
 
-                <!-- Button 2: Optimize route -->
-                <button class="test-btn highlight" onclick="executarOtimizacaoRota()">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 800; color: var(--ml-blue-hover);">
-                            ⚡ 2. Gerar Melhor Rota (Otimizar Trajeto no Mapa)
+                    <button class="test-btn" onclick="acionarOcrGaleria()">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--ml-blue-hover);">
+                                📷 Ler Fotos / Prints com IA (OCR)
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Carrega prints da lista de paradas direto da galeria
+                            </div>
                         </div>
-                        <div style="font-size: 11px; color: var(--text-muted);">
-                            Calcula a rota mais curta sem cruzamentos e reordena as paradas de 1 a 40
-                        </div>
-                    </div>
-                    <span style="font-size: 16px;">🗺️</span>
-                </button>
-            </div>
+                        <span style="font-size: 16px;">🖼️</span>
+                    </button>
 
-            <!-- Quick Bipe Simulator on 40 stops -->
-            <div class="test-box">
-                <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
-                    Simulações Rápidas de Bipe (Teste dos Pacotes):
+                    <button class="test-btn" onclick="toggleMuteSound()">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 800; color: var(--text-main);" id="btn-label-sound-tab">
+                                🔊 Áudio & Avisos por Voz: Ativado
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                Toque para alternar entre Som Ligado e Mudo
+                            </div>
+                        </div>
+                        <span style="font-size: 16px;" id="btn-icon-sound-tab">🔊</span>
+                    </button>
                 </div>
-
-                <!-- Bipe Photo Package -->
-                <button class="test-btn" onclick="testarBipeCodigo('48314806075')">
-                    <div>
-                        <div style="color: var(--ml-yellow); font-weight: 700;">📸 Bipar Pacote da Foto: 48314806075</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Valdineia Mendes (Rua Umberto Vetoratto, 170)</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Bipar</span>
-                </button>
-
-                <!-- Bipe 5 digits -->
-                <button class="test-btn" onclick="testarBipeCodigo('06075')">
-                    <div>
-                        <div style="font-weight: 700;">🏷️ Bipar apenas os 5 dígitos finais: 06075</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Busca inteligente por final de ID</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Bipar</span>
-                </button>
-
-                <!-- Bipe Stop in Middle of Car -->
-                <button class="test-btn" onclick="testarBipeCodigo('48314806090')">
-                    <div>
-                        <div style="color: var(--warning); font-weight: 700;">🟡 Bipar Pacote da Zona Meio: 06090</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Rua Maria Monteiro, Cambuí</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Bipar</span>
-                </button>
-
-                <!-- Bipe Stop in Trunk -->
-                <button class="test-btn" onclick="testarBipeCodigo('48314806110')">
-                    <div>
-                        <div style="color: var(--danger); font-weight: 700;">🔴 Bipar Pacote do Porta-malas: 06110</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Rua Buarque de Macedo, Taquaral</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Bipar</span>
-                </button>
-
-                <!-- Bipe 5 Random Packages in Sequence -->
-                <button class="test-btn" onclick="simularBipe5Aleatorios()">
-                    <div>
-                        <div style="font-weight: 700;">🎲 Bipar 5 Pacotes Aleatórios em Sequência</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Testa a velocidade de bipe e voz contínua</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Simular</span>
-                </button>
-
-                <!-- Bipe Duplicate -->
-                <button class="test-btn" onclick="testarBipeCodigo('48314806075')">
-                    <div>
-                        <div style="color: var(--warning); font-weight: 700;">⚠️ Simular Pacote Duplicado</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Testa o aviso sonoro e visual de duplicidade</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Testar</span>
-                </button>
-
-                <!-- Bipe Unknown -->
-                <button class="test-btn" onclick="testarBipeCodigo('99999999999')">
-                    <div>
-                        <div style="color: var(--danger); font-weight: 700;">🚫 Simular Pacote Não Pertencente à Rota</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Testa o bloqueio de pacote errado da gaiola</div>
-                    </div>
-                    <span style="font-size: 12px; background: var(--surface-card); padding: 4px 8px; border-radius: 4px;">Testar</span>
-                </button>
             </div>
         </div>
 
@@ -844,6 +823,84 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Audio Mute State
+        let isAudioMuted = false;
+
+        function setAudioMuted(muted) {
+            isAudioMuted = !!muted;
+            const btnSound = document.getElementById('btn-sound-toggle');
+            if (btnSound) {
+                btnSound.innerHTML = isAudioMuted ? '🔇 Mudo' : '🔊 Som';
+                btnSound.style.color = isAudioMuted ? '#ef4444' : '#10b981';
+            }
+            const lblSoundTab = document.getElementById('btn-label-sound-tab');
+            const iconSoundTab = document.getElementById('btn-icon-sound-tab');
+            if (lblSoundTab) {
+                lblSoundTab.innerText = isAudioMuted ? '🔇 Áudio & Avisos por Voz: Desativado (Mudo)' : '🔊 Áudio & Avisos por Voz: Ativado';
+                lblSoundTab.style.color = isAudioMuted ? '#ef4444' : 'var(--text-main)';
+            }
+            if (iconSoundTab) {
+                iconSoundTab.innerText = isAudioMuted ? '🔇' : '🔊';
+            }
+        }
+
+        function toggleMuteSound() {
+            isAudioMuted = !isAudioMuted;
+            setAudioMuted(isAudioMuted);
+            if (window.Android && window.Android.setAudioMuted) {
+                window.Android.setAudioMuted(isAudioMuted);
+            }
+            showToast(isAudioMuted ? "🔇 Som Desativado (Modo Silencioso)" : "🔊 Som Ativado com Avisos de Voz");
+        }
+
+        // Firebase Cloud Functions
+        function salvarRotaParaFirebase() {
+            if (rotaAtual.length === 0) {
+                showToast("Nenhuma rota carregada para salvar!");
+                return;
+            }
+            if (window.Android && window.Android.salvarRotaFirebase) {
+                showToast("Enviando rota para o Firebase...");
+                window.Android.salvarRotaFirebase(JSON.stringify(rotaAtual));
+            } else {
+                showToast("Simulação: Rota salva com sucesso no Firebase!");
+            }
+        }
+
+        function baixarRotaDoFirebase() {
+            if (window.Android && window.Android.carregarRotaFirebase) {
+                showToast("Conectando ao Firebase...");
+                window.Android.carregarRotaFirebase();
+            } else {
+                showToast("Conexão com Firebase disponível no aplicativo Android.");
+            }
+        }
+
+        function acionarOcrGaleria() {
+            if (window.Android && window.Android.abrirSeletorGaleria) {
+                window.Android.abrirSeletorGaleria();
+            } else {
+                showToast("Seletor de fotos disponível no aplicativo Android.");
+            }
+        }
+
+        function atualizarStatusFirebase() {
+            if (window.Android && window.Android.getFirebaseStatus) {
+                try {
+                    let st = JSON.parse(window.Android.getFirebaseStatus());
+                    const lbl = document.getElementById('firebase-status-label');
+                    const sala = document.getElementById('firebase-sala-label');
+                    if (lbl) {
+                        lbl.innerText = st.configurado ? '● Conectado ao Firebase' : '⚠️ Não configurado';
+                        lbl.style.color = st.configurado ? '#10b981' : '#f59e0b';
+                    }
+                    if (sala) {
+                        sala.innerText = st.sala || 'rota_extra';
+                    }
+                } catch (e) {}
+            }
+        }
+
         // Polyfill Android interface for browser testing
         if (typeof window.Android === 'undefined') {
             window.Android = {
@@ -852,6 +909,7 @@
                     if (code) window.confirmarBipe(code);
                 },
                 speak: function(text) {
+                    if (isAudioMuted) return;
                     console.log("[TTS]", text);
                     if ('speechSynthesis' in window) {
                         let utter = new SpeechSynthesisUtterance(text);
@@ -860,8 +918,14 @@
                         window.speechSynthesis.speak(utter);
                     }
                 },
-                abrirNavegacao: function(lat, lng, endereco) {
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                abrirNavegacao: function(lat, lng, endereco, appNav) {
+                    if (appNav === 'waze') {
+                        let dest = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(endereco);
+                        window.open(`https://waze.com/ul?ll=${dest}&navigate=yes`, '_blank');
+                    } else {
+                        let dest = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(endereco);
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                    }
                 },
                 vibrar: function(tipo) {
                     if (navigator.vibrate) {
@@ -869,6 +933,9 @@
                         else if (tipo === 'warning') navigator.vibrate([100, 50, 100]);
                         else navigator.vibrate([150, 80, 150]);
                     }
+                },
+                setAudioMuted: function(m) {
+                    isAudioMuted = m;
                 }
             };
         }
@@ -1063,7 +1130,7 @@
         // Executar Otimização
         function executarOtimizacaoRota() {
             if (rotaAtual.length === 0) {
-                carregar40ParadasCampinas(true);
+                showToast("Nenhuma rota carregada para otimizar! Toque em '1. Ler Tela' ou 📷 OCR.");
                 return;
             }
 
@@ -1080,11 +1147,11 @@
             switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[3]);
             renderizarMapa();
 
-            let speakMsg = `Rota otimizada! 40 paradas reorganizadas na melhor sequência. Economia estimada de ${economia} quilômetros.`;
-            if (window.Android && window.Android.speak) {
+            let speakMsg = `Rota otimizada! ${rotaAtual.length} paradas reorganizadas na melhor sequência. Economia estimada de ${economia} quilômetros.`;
+            if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(speakMsg);
             }
-            showToast(`🚀 Rota Otimizada! Economia de ${economia} km (${perc}%)!`);
+            showToast(`🚀 Rota Otimizada! ${rotaAtual.length} paradas com economia de ${economia} km (${perc}%)!`);
         }
 
         // Alternar Visão: Rota Bruta (Zig-Zag) vs Rota Otimizada
@@ -1186,7 +1253,7 @@
                 document.getElementById('bipe-res-packages-list').innerHTML = `<span style="color: #ff7b72;">Atenção: Verifique com o líder da gaiola ou confira se não é de outro motorista.</span>`;
                 document.getElementById('bipe-res-alert').innerText = "🚫 NÃO COLOQUE NO CARRO!";
 
-                if (window.Android && window.Android.speak) window.Android.speak("Atenção! Pacote desconhecido não pertence a esta rota.");
+                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção! Pacote desconhecido não pertence a esta rota.");
                 if (window.Android && window.Android.vibrar) window.Android.vibrar("danger");
                 return;
             }
@@ -1201,7 +1268,7 @@
                 document.getElementById('bipe-res-packages-list').innerHTML = `Todos os ${match.parada.pacotes.length} pacotes já foram conferidos e guardados no carro.`;
                 document.getElementById('bipe-res-alert').innerText = "⚠️ Não conte este pacote duas vezes!";
                 
-                if (window.Android && window.Android.speak) window.Android.speak("Atenção: Todos os pacotes desta parada já foram conferidos!");
+                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção: Todos os pacotes desta parada já foram conferidos!");
                 if (window.Android && window.Android.vibrar) window.Android.vibrar("warning");
                 return;
             }
@@ -1267,8 +1334,13 @@
                 document.getElementById('bipe-res-alert').innerText = `✅ Pacote único desta parada conferido com sucesso.`;
             }
 
-            if (window.Android && window.Android.speak) window.Android.speak(speakText);
+            if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak(speakText);
             if (window.Android && window.Android.vibrar) window.Android.vibrar("success");
+
+            // Sincroniza bipe em tempo real com o Firebase
+            if (window.Android && window.Android.syncBipeFirebase) {
+                window.Android.syncBipeFirebase(code, paradaIndex + 1);
+            }
 
             // Log
             historicoBipes.unshift({
@@ -1386,12 +1458,18 @@
                             ${pkgsHtml}
                         </div>
 
-                        <div class="stop-actions">
-                            <button class="btn-action-small nav-btn" onclick="navegarParada(${i})">
-                                🧭 Navegar (Maps/Waze)
+                        <div class="stop-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="btn-action-small" onclick="navegarWaze(${i})" style="background: rgba(47, 129, 247, 0.2); color: #58a6ff; border: 1px solid #58a6ff; font-weight: 700;">
+                                🚗 Waze
                             </button>
-                            <button class="btn-action-small" onclick="testarBipeCodigo('${p.pacotes[0].id}')">
-                                📸 Bipar Parada
+                            <button class="btn-action-small" onclick="navegarGoogleMaps(${i})" style="background: rgba(35, 134, 54, 0.2); color: #2ea043; border: 1px solid #2ea043; font-weight: 700;">
+                                🗺️ Maps
+                            </button>
+                            <button class="btn-action-small" onclick="navegarParada(${i})" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
+                                🧭 Padrão
+                            </button>
+                            <button class="btn-action-small" onclick="testarBipeCodigo('${p.pacotes[0] ? p.pacotes[0].id : ''}')" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
+                                🏷️ Bipar
                             </button>
                         </div>
                     </div>
@@ -1401,14 +1479,38 @@
             container.innerHTML = html;
         }
 
+        function navegarWaze(index) {
+            let p = rotaAtual[index];
+            if (!p) return;
+            let endCompleto = `${p.endereco}, ${p.bairro || ''}, ${p.cidade || 'Campinas'}`;
+            if (window.Android && window.Android.abrirNavegacao) {
+                window.Android.abrirNavegacao(p.lat || 0, p.lng || 0, endCompleto, 'waze');
+            } else {
+                let dest = (p.lat && p.lng) ? `${p.lat},${p.lng}` : encodeURIComponent(endCompleto);
+                window.open(`https://waze.com/ul?ll=${dest}&navigate=yes`, '_blank');
+            }
+        }
+
+        function navegarGoogleMaps(index) {
+            let p = rotaAtual[index];
+            if (!p) return;
+            let endCompleto = `${p.endereco}, ${p.bairro || ''}, ${p.cidade || 'Campinas'}`;
+            if (window.Android && window.Android.abrirNavegacao) {
+                window.Android.abrirNavegacao(p.lat || 0, p.lng || 0, endCompleto, 'maps');
+            } else {
+                let dest = (p.lat && p.lng) ? `${p.lat},${p.lng}` : encodeURIComponent(endCompleto);
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+            }
+        }
+
         function navegarParada(index) {
             let p = rotaAtual[index];
             if (!p) return;
+            let endCompleto = `${p.endereco}, ${p.bairro || ''}, ${p.cidade || 'Campinas'}`;
             if (window.Android && window.Android.abrirNavegacao) {
-                window.Android.abrirNavegacao(p.lat || 0, p.lng || 0, `${p.endereco}, ${p.bairro}, ${p.cidade}`);
+                window.Android.abrirNavegacao(p.lat || 0, p.lng || 0, endCompleto, 'chooser');
             } else {
-                let dest = (p.lat && p.lng) ? `${p.lat},${p.lng}` : encodeURIComponent(`${p.endereco}, ${p.cidade}`);
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                navegarGoogleMaps(index);
             }
         }
 
@@ -1424,12 +1526,16 @@
                     <div class="card" style="margin-bottom: 6px; padding: 10px 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <b>#${i + 1} - ${p.destinatario || 'Cliente'}</b>
-                            <span style="font-size: 11px; color: var(--text-muted);">${p.pacotes.length} pacote</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">${p.pacotes.length} pacote(s)</span>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin: 2px 0 6px 0;">
                             ${p.endereco}
                         </div>
                         <div>${pkgsBrief}</div>
+                        <div style="display: flex; gap: 6px; margin-top: 6px;">
+                            <button onclick="navegarWaze(${i})" style="padding: 4px 8px; font-size: 11px; background: rgba(47, 129, 247, 0.2); color: #58a6ff; border: 1px solid #58a6ff; border-radius: 4px; cursor: pointer; font-weight: bold;">🚗 Waze</button>
+                            <button onclick="navegarGoogleMaps(${i})" style="padding: 4px 8px; font-size: 11px; background: rgba(35, 134, 54, 0.2); color: #2ea043; border: 1px solid #2ea043; border-radius: 4px; cursor: pointer; font-weight: bold;">🗺️ Maps</button>
+                        </div>
                     </div>
                 `;
 
@@ -1500,9 +1606,14 @@
                             <div style="font-weight: 800; font-size: 14px; color: #2f81f7;">#${i + 1} - ${p.destinatario || 'Destinatário'}</div>
                             <div style="font-size: 12px; margin: 4px 0;">${p.endereco}</div>
                             <div style="font-size: 11px; color: #555;">Pacote: <b>${p.pacotes[0]?.final || p.pacotes[0]?.id}</b> (${p.zona || 'Zona'})</div>
-                            <button onclick="navegarParada(${i})" style="margin-top: 6px; padding: 6px; background: #2f81f7; color: #fff; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;">
-                                🧭 Navegar até aqui
-                            </button>
+                            <div style="display: flex; gap: 4px; margin-top: 6px;">
+                                <button onclick="navegarWaze(${i})" style="flex: 1; padding: 6px 4px; background: #33ccff; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px;">
+                                    🚗 Waze
+                                </button>
+                                <button onclick="navegarGoogleMaps(${i})" style="flex: 1; padding: 6px 4px; background: #34a853; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px;">
+                                    🗺️ Maps
+                                </button>
+                            </div>
                         </div>
                     `;
 
@@ -1830,9 +1941,9 @@
             renderizarMapa();
 
             let distTotal = calcularDistanciaTotalRota(rotaAtual).toFixed(1);
-            showToast(`40 paradas carregadas em Campinas (${distTotal} km)!`);
-            if (window.Android && window.Android.speak) {
-                window.Android.speak(`40 paradas carregadas em Campinas. Total de ${distTotal} quilômetros.`);
+            showToast(`${rotaAtual.length} paradas carregadas (${distTotal} km)!`);
+            if (!isAudioMuted && window.Android && window.Android.speak) {
+                window.Android.speak(`${rotaAtual.length} paradas carregadas. Total de ${distTotal} quilômetros.`);
             }
         }
 
@@ -1851,7 +1962,18 @@
             renderizarParadas();
             renderizarZonasCarro();
             renderizarMapa();
-            showToast(`Rota recebida com ${rotaAtual.length} paradas otimizadas!`);
+            switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
+
+            let totalPacotes = rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0);
+            showToast(`Rota carregada com ${rotaAtual.length} paradas e ${totalPacotes} pacotes!`);
+            if (!isAudioMuted && window.Android && window.Android.speak) {
+                window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
+            }
+
+            // Sincroniza automaticamente a rota com o Firebase
+            if (window.Android && window.Android.salvarRotaFirebase) {
+                window.Android.salvarRotaFirebase(JSON.stringify(rotaAtual));
+            }
         };
 
         window.carregarRotaExemploReal = function() {
@@ -1861,6 +1983,12 @@
         // DOM Ready
         window.addEventListener('DOMContentLoaded', () => {
             initMap();
+            atualizarStatusFirebase();
+            if (window.Android && window.Android.isAudioMuted) {
+                try {
+                    setAudioMuted(window.Android.isAudioMuted());
+                } catch (e) {}
+            }
         });
     </script>
 </body>

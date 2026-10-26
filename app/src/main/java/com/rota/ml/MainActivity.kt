@@ -34,6 +34,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: SharedPreferences
     private var tts: TextToSpeech? = null
+    private var isAudioMuted = false
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
@@ -55,9 +57,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(binding.root)
 
         prefs = getSharedPreferences("RotaMLPrefs", Context.MODE_PRIVATE)
+        isAudioMuted = prefs.getBoolean("is_audio_muted", false)
         tts = TextToSpeech(this, this)
 
         setupUI()
+        atualizarBotaoMute()
         setupListeners()
         setupLeitorListener()
 
@@ -113,8 +117,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             iniciarScanner()
         }
 
-        binding.btnQuickTest.setOnClickListener {
-            carregarRotaTeste()
+        binding.btnMuteAudio.setOnClickListener {
+            toggleMuteAudio()
         }
 
         binding.btnConfig.setOnClickListener {
@@ -124,6 +128,27 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.chipAcessibilidade.setOnClickListener {
             solicitarAtivacaoAcessibilidade()
         }
+    }
+
+    private fun atualizarBotaoMute() {
+        runOnUiThread {
+            binding.btnMuteAudio.text = if (isAudioMuted) "🔇" else "🔊"
+            binding.btnMuteAudio.alpha = if (isAudioMuted) 0.5f else 1.0f
+        }
+    }
+
+    private fun toggleMuteAudio() {
+        isAudioMuted = !isAudioMuted
+        prefs.edit().putBoolean("is_audio_muted", isAudioMuted).apply()
+        atualizarBotaoMute()
+        if (isAudioMuted) {
+            tts?.stop()
+        }
+        binding.webView.post {
+            binding.webView.evaluateJavascript("if (window.setAudioMuted) window.setAudioMuted($isAudioMuted);", null)
+        }
+        val msg = if (isAudioMuted) "🔇 Som desativado (Mudo)" else "🔊 Som ativado"
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     private fun setupLeitorListener() {
@@ -332,6 +357,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 binding.webView.post {
                     binding.webView.evaluateJavascript("confirmarBipe('$code')", null)
                 }
+                syncFirebaseBipe(code)
                 syncSupabase(code)
             }
             .addOnFailureListener { e ->
@@ -339,57 +365,344 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
     }
 
-    private fun carregarRotaTeste() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("🧪 Escolha a Rota de Teste")
-            .setItems(arrayOf(
-                "⚡ Suas 11 Paradas Envios Extra (Foto Real - 62 Unidades)",
-                "📦 Rota Completa com 40 Paradas em Campinas"
-            )) { _, which ->
-                if (which == 0) {
-                    binding.webView.post {
-                        binding.webView.evaluateJavascript("carregar11ParadasEnviosExtra(true)", null)
+    private fun getFirebaseBaseUrl(): String {
+        var url = prefs.getString("Firebase URL", "")?.trim() ?: ""
+        if (url.isNotBlank()) {
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://$url"
+            }
+            if (url.endsWith("/")) {
+                url = url.substring(0, url.length - 1)
+            }
+            if (!url.contains("firebaseio.com") && !url.contains("googleapis.com")) {
+                url = "$url-default-rtdb.firebaseio.com"
+            }
+        }
+        return url
+    }
+
+    private fun getFirebaseAuthToken(): String {
+        return prefs.getString("Firebase Key", "")?.trim() ?: ""
+    }
+
+    private fun getFirebaseSala(): String {
+        val sala = prefs.getString("Firebase Sala", "rota_extra")?.trim() ?: "rota_extra"
+        return if (sala.isNotBlank()) sala else "rota_extra"
+    }
+
+    fun syncFirebaseBipe(code: String, paradaNum: Int = 0) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) return
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/bipes/$sala.json$authParam"
+
+        val bodyJson = JSONObject().apply {
+            put("codigo", code)
+            put("parada_num", paradaNum)
+            put("timestamp", System.currentTimeMillis())
+            put("data_hora", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+            put("dispositivo", Build.MODEL)
+            put("status", "conferido")
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                Log.d("FirebaseSync", "Bipe sync status=${resp.code}")
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao sincronizar bipe no Firebase", e)
+            }
+        }
+    }
+
+    fun salvarRotaNoFirebase(rotaJsonStr: String, callback: ((Boolean, String) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) {
+            callback?.invoke(false, "Configure a URL do Firebase nas configurações ⚙️")
+            return
+        }
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/atual.json$authParam"
+
+        val bodyJson = JSONObject().apply {
+            put("atualizado_em", System.currentTimeMillis())
+            put("data_hora", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+            put("dispositivo", Build.MODEL)
+            try {
+                put("paradas", JSONArray(rotaJsonStr))
+            } catch (e: Exception) {
+                put("dados_brutos", rotaJsonStr)
+            }
+        }
+
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .put(bodyJson.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(true, "☁️ Rota salva no Firebase ($sala) com sucesso!")
                     }
-                    Toast.makeText(this, "11 Paradas dos Envios Extra carregadas!", Toast.LENGTH_SHORT).show()
                 } else {
-                    binding.webView.post {
-                        binding.webView.evaluateJavascript("carregar40ParadasCampinas(true)", null)
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(false, "Erro Firebase (${resp.code}): ${resp.message}")
                     }
-                    Toast.makeText(this, "40 Paradas em Campinas carregadas!", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao salvar rota", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, "Falha de conexão com Firebase: ${e.message}")
                 }
             }
-            .setNegativeButton("Cancelar", null)
-            .show()
+        }
+    }
+
+    fun baixarRotaDoFirebase(callback: ((Boolean, String, String?) -> Unit)? = null) {
+        val baseUrl = getFirebaseBaseUrl()
+        if (baseUrl.isBlank()) {
+            callback?.invoke(false, "Configure a URL do Firebase nas configurações ⚙️", null)
+            return
+        }
+
+        val authToken = getFirebaseAuthToken()
+        val sala = getFirebaseSala()
+        val authParam = if (authToken.isNotBlank()) "?auth=$authToken" else ""
+        val url = "$baseUrl/rotas/$sala/atual.json$authParam"
+
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).get().build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    val respStr = resp.body?.string() ?: ""
+                    if (respStr == "null" || respStr.isBlank()) {
+                        withContext(Dispatchers.Main) {
+                            callback?.invoke(false, "Nenhuma rota salva no Firebase para a sala '$sala'", null)
+                        }
+                        return@launch
+                    }
+                    val respObj = JSONObject(respStr)
+                    val paradas = respObj.optJSONArray("paradas")
+                    val paradasStr = paradas?.toString() ?: respObj.optString("dados_brutos", "")
+
+                    if (paradasStr.isNotBlank()) {
+                        withContext(Dispatchers.Main) {
+                            callback?.invoke(true, "✅ Rota recuperada do Firebase com sucesso!", paradasStr)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            callback?.invoke(false, "Formato de dados no Firebase não reconhecido", null)
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        callback?.invoke(false, "Erro Firebase (${resp.code}): ${resp.message}", null)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FirebaseSync", "Erro ao baixar rota", e)
+                withContext(Dispatchers.Main) {
+                    callback?.invoke(false, "Falha ao conectar ao Firebase: ${e.message}", null)
+                }
+            }
+        }
+    }
+
+    fun testarConexaoFirebase(urlInput: String, keyInput: String, salaInput: String, onResult: (Boolean, String) -> Unit) {
+        var url = urlInput.trim()
+        if (url.isBlank()) {
+            onResult(false, "Informe a URL do Firebase")
+            return
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://$url"
+        }
+        if (url.endsWith("/")) url = url.substring(0, url.length - 1)
+        if (!url.contains("firebaseio.com") && !url.contains("googleapis.com")) {
+            url = "$url-default-rtdb.firebaseio.com"
+        }
+
+        val authParam = if (keyInput.isNotBlank()) "?auth=${keyInput.trim()}" else ""
+        val pathPing = if (salaInput.isNotBlank()) "ping_${salaInput.trim()}" else "ping"
+        val testUrl = "$url/$pathPing.json$authParam"
+
+        val client = OkHttpClient()
+        val testBody = JSONObject().put("status", "ok").put("testado_em", System.currentTimeMillis())
+        val request = Request.Builder()
+            .url(testUrl)
+            .put(testBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resp = client.newCall(request).execute()
+                if (resp.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        onResult(true, "✅ Conexão estabelecida com sucesso com o Firebase!")
+                    }
+                } else if (resp.code == 401 || resp.code == 403) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Permissão negada (Código ${resp.code}). Verifique a chave de autenticação ou as regras do Firebase.")
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Firebase respondeu com status ${resp.code}: ${resp.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, "Erro de rede ao conectar: ${e.localizedMessage ?: e.message}")
+                }
+            }
+        }
     }
 
     private fun showConfigDialog() {
-        val view = LinearLayout(this).apply {
+        val scrollView = ScrollView(this)
+        val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 20, 40, 20)
+            setPadding(40, 30, 40, 30)
+        }
+        scrollView.addView(container)
+
+        fun createSectionTitle(title: String) = TextView(this).apply {
+            text = title
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.parseColor("#FFE600"))
+            setPadding(0, 16, 0, 8)
         }
 
-        val keys = arrayOf("Gemini Key 1", "Gemini Key 2", "Gemini Key 3", "Gemini Key 4", "Supa URL", "Supa Key", "Sala Casal")
-        val edits = keys.map { label ->
-            TextView(this).apply { 
-                text = label 
-                setTextColor(Color.DKGRAY)
+        fun createField(label: String, prefKey: String, hintText: String, isPassword: Boolean = false): EditText {
+            val tv = TextView(this).apply {
+                text = label
                 textSize = 12f
-            }.also { view.addView(it) }
-            EditText(this).apply {
-                setText(prefs.getString(label, ""))
+                setTextColor(Color.parseColor("#9CA3AF"))
+                setPadding(0, 8, 0, 4)
+            }
+            val et = EditText(this).apply {
+                setText(prefs.getString(prefKey, ""))
+                hint = hintText
+                setHintTextColor(Color.parseColor("#6B7280"))
                 textSize = 14f
-                view.addView(this)
+                setTextColor(Color.WHITE)
+                background = null
+                setBackgroundColor(Color.parseColor("#1F2937"))
+                setPadding(24, 18, 24, 18)
+                if (isPassword) {
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                }
+            }
+            container.addView(tv)
+            container.addView(et)
+            return et
+        }
+
+        container.addView(createSectionTitle("🔥 Google Firebase Database"))
+        val editFbUrl = createField("URL do Firebase Realtime Database", "Firebase URL", "https://seu-projeto-default-rtdb.firebaseio.com")
+        val editFbKey = createField("Chave Secreta / Auth Token do Firebase", "Firebase Key", "Token ou Database Secret", isPassword = true)
+        val editFbSala = createField("Identificador da Sala / Motorista", "Firebase Sala", "ex: rota_extra_01 ou seu nome")
+
+        val btnTestFb = com.google.android.material.button.MaterialButton(this).apply {
+            text = "🧪 Testar Conexão com Firebase"
+            textSize = 12f
+            setPadding(0, 12, 0, 12)
+            setBackgroundColor(Color.parseColor("#374151"))
+            setTextColor(Color.parseColor("#60A5FA"))
+            setOnClickListener {
+                val url = editFbUrl.text.toString().trim()
+                val key = editFbKey.text.toString().trim()
+                val sala = editFbSala.text.toString().trim()
+                Toast.makeText(this@MainActivity, "Testando conexão Firebase...", Toast.LENGTH_SHORT).show()
+                testarConexaoFirebase(url, key, sala) { _, msg ->
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
+                }
             }
         }
+        val paramsBtn = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(0, 12, 0, 16)
+        }
+        container.addView(btnTestFb, paramsBtn)
+
+        container.addView(createSectionTitle("🧭 Navegador Padrão"))
+        val tvNav = TextView(this).apply {
+            text = "Escolha qual aplicativo abrir ao navegar:"
+            textSize = 12f
+            setTextColor(Color.parseColor("#9CA3AF"))
+            setPadding(0, 4, 0, 8)
+        }
+        container.addView(tvNav)
+
+        val navOptions = arrayOf("Perguntar Sempre", "🚗 Waze", "🗺️ Google Maps")
+        val currentNav = prefs.getString("Navegador Padrao", "Perguntar Sempre") ?: "Perguntar Sempre"
+        val selectedNav = when {
+            currentNav.contains("Waze", ignoreCase = true) -> 1
+            currentNav.contains("Maps", ignoreCase = true) || currentNav.contains("Google", ignoreCase = true) -> 2
+            else -> 0
+        }
+
+        val radioGroupNav = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+        }
+        navOptions.forEachIndexed { index, option ->
+            val rb = RadioButton(this).apply {
+                text = option
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                id = index + 100
+                isChecked = (index == selectedNav)
+            }
+            radioGroupNav.addView(rb)
+        }
+        container.addView(radioGroupNav)
+
+        container.addView(createSectionTitle("🤖 Google Gemini IA (Chaves Opcionais)"))
+        val editGemini1 = createField("Gemini API Key 1", "Gemini Key 1", "AIzaSy...")
+        val editGemini2 = createField("Gemini API Key 2 (Backup)", "Gemini Key 2", "AIzaSy...")
 
         MaterialAlertDialogBuilder(this)
-            .setTitle("⚙️ Configurações RotaML")
-            .setView(view)
-            .setPositiveButton("Salvar") { _, _ ->
-                val editor = prefs.edit()
-                keys.forEachIndexed { i, label -> editor.putString(label, edits[i].text.toString().trim()) }
-                editor.apply()
-                Toast.makeText(this, "Configurações salvas!", Toast.LENGTH_SHORT).show()
+            .setTitle("⚙️ Configurações & Firebase")
+            .setView(scrollView)
+            .setPositiveButton("Salvar Tudo") { _, _ ->
+                val chosenNav = when (radioGroupNav.checkedRadioButtonId) {
+                    101 -> "Waze"
+                    102 -> "Google Maps"
+                    else -> "Perguntar Sempre"
+                }
+
+                prefs.edit().apply {
+                    putString("Firebase URL", editFbUrl.text.toString().trim())
+                    putString("Firebase Key", editFbKey.text.toString().trim())
+                    putString("Firebase Sala", editFbSala.text.toString().trim())
+                    putString("Navegador Padrao", chosenNav)
+                    putString("Gemini Key 1", editGemini1.text.toString().trim())
+                    putString("Gemini Key 2", editGemini2.text.toString().trim())
+                    apply()
+                }
+
+                Toast.makeText(this, "Configurações e chaves salvas com sucesso!", Toast.LENGTH_SHORT).show()
+                binding.webView.post {
+                    binding.webView.evaluateJavascript("if (window.atualizarStatusFirebase) window.atualizarStatusFirebase();", null)
+                }
             }
             .setNegativeButton("Cancelar", null)
             .show()
@@ -404,14 +717,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
             if (paradasProntas.isEmpty() && rawTextList.isEmpty()) {
                 MaterialAlertDialogBuilder(this@MainActivity)
-                    .setTitle("📍 Nenhuma Parada Lida Ainda")
-                    .setMessage("Ainda não foram detectados dados da tela.\n\nVocê pode:\n1. Tocar em '1. Ler Tela' para rolar o app Envios Extra\n2. Tocar no botão 🖼️ para escolher um print da galeria\n\nDeseja carregar as 11 paradas dos seus prints agora para testar?")
-                    .setPositiveButton("Carregar Rota dos Prints") { _, _ ->
-                        binding.webView.post {
-                            binding.webView.evaluateJavascript("carregar11ParadasEnviosExtra(true)", null)
-                        }
+                    .setTitle("📍 Nenhuma Parada Detectada")
+                    .setMessage("Para processar e otimizar a rota:\n\n1. Toque em '1. Ler Tela' para ler diretamente do aplicativo Mercado Envios Extra.\n2. Ou toque no ícone 🖼️ (OCR) para escolher fotos/prints da galeria.")
+                    .setPositiveButton("📷 Ler Fotos (OCR)") { _, _ ->
+                        abrirSeletorGaleria()
                     }
-                    .setNegativeButton("Entendido", null)
+                    .setNegativeButton("Fechar", null)
                     .show()
                 return@launch
             }
@@ -612,7 +923,29 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         @JavascriptInterface
         fun speak(text: String) {
+            if (isAudioMuted) return
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "UTTERANCE_${System.currentTimeMillis()}")
+        }
+
+        @JavascriptInterface
+        fun setAudioMuted(muted: Boolean) {
+            runOnUiThread {
+                if (isAudioMuted != muted) {
+                    toggleMuteAudio()
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun isAudioMuted(): Boolean {
+            return isAudioMuted
+        }
+
+        @JavascriptInterface
+        fun toggleMute() {
+            runOnUiThread {
+                toggleMuteAudio()
+            }
         }
 
         @JavascriptInterface
@@ -621,8 +954,69 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
-        fun abrirNavegacao(lat: Double, lng: Double, endereco: String) {
-            this@MainActivity.abrirAppNavegacao(lat, lng, endereco)
+        fun abrirNavegacao(lat: Double, lng: Double, endereco: String, appNav: String = "chooser") {
+            runOnUiThread {
+                this@MainActivity.abrirAppNavegacao(lat, lng, endereco, appNav)
+            }
+        }
+
+        @JavascriptInterface
+        fun abrirSeletorGaleria() {
+            runOnUiThread {
+                this@MainActivity.abrirSeletorGaleria()
+            }
+        }
+
+        @JavascriptInterface
+        fun abrirConfiguracoes() {
+            runOnUiThread {
+                showConfigDialog()
+            }
+        }
+
+        @JavascriptInterface
+        fun salvarRotaFirebase(rotaJsonStr: String) {
+            salvarRotaNoFirebase(rotaJsonStr) { _, msg ->
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
+                    binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun carregarRotaFirebase() {
+            baixarRotaDoFirebase { success, msg, rotaJson ->
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
+                    binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
+                    if (success && !rotaJson.isNullOrBlank()) {
+                        binding.webView.evaluateJavascript("carregarRota($rotaJson);", null)
+                    }
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun syncFirebase(codigo: String, paradaNum: Int = 0) {
+            syncFirebaseBipe(codigo, paradaNum)
+        }
+
+        @JavascriptInterface
+        fun syncBipeFirebase(codigo: String, paradaNum: Int = 0) {
+            syncFirebaseBipe(codigo, paradaNum)
+        }
+
+        @JavascriptInterface
+        fun getFirebaseStatus(): String {
+            val url = prefs.getString("Firebase URL", "") ?: ""
+            val sala = prefs.getString("Firebase Sala", "rota_extra") ?: "rota_extra"
+            val status = JSONObject().apply {
+                put("configurado", url.isNotBlank())
+                put("url", url)
+                put("sala", sala)
+            }
+            return status.toString()
         }
     }
 
@@ -644,21 +1038,88 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun abrirAppNavegacao(lat: Double, lng: Double, endereco: String) {
+    fun abrirAppNavegacao(lat: Double, lng: Double, endereco: String, appNav: String = "chooser") {
+        val prefNav = prefs.getString("Navegador Padrao", "Perguntar Sempre") ?: "Perguntar Sempre"
+        val app = if (appNav == "chooser") {
+            when {
+                prefNav.contains("Waze", ignoreCase = true) -> "waze"
+                prefNav.contains("Maps", ignoreCase = true) || prefNav.contains("Google", ignoreCase = true) -> "maps"
+                else -> "chooser"
+            }
+        } else {
+            appNav.lowercase()
+        }
+
+        when {
+            app == "waze" -> abrirWaze(lat, lng, endereco)
+            app == "maps" || app == "google" -> abrirGoogleMaps(lat, lng, endereco)
+            else -> {
+                val opcoes = arrayOf("🚗 Waze", "🗺️ Google Maps")
+                var selected = 0
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("🧭 Escolha o Aplicativo de Navegação")
+                    .setSingleChoiceItems(opcoes, 0) { _, which -> selected = which }
+                    .setPositiveButton("Navegar") { _, _ ->
+                        if (selected == 0) abrirWaze(lat, lng, endereco) else abrirGoogleMaps(lat, lng, endereco)
+                    }
+                    .setNeutralButton("Definir como Padrão") { _, _ ->
+                        val padrao = if (selected == 0) "Waze" else "Google Maps"
+                        prefs.edit().putString("Navegador Padrao", padrao).apply()
+                        Toast.makeText(this, "$padrao definido como navegador padrão!", Toast.LENGTH_SHORT).show()
+                        if (selected == 0) abrirWaze(lat, lng, endereco) else abrirGoogleMaps(lat, lng, endereco)
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun abrirWaze(lat: Double, lng: Double, endereco: String) {
         try {
             val uri = if (lat != 0.0 && lng != 0.0) {
-                Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(endereco)})")
+                Uri.parse("waze://?ll=$lat,$lng&navigate=yes")
             } else {
-                Uri.parse("geo:0,0?q=${Uri.encode(endereco)}")
+                Uri.parse("waze://?q=${Uri.encode(endereco)}&navigate=yes")
             }
-            val intent = Intent(Intent.ACTION_VIEW, uri)
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                `package` = "com.waze"
+            }
             startActivity(intent)
         } catch (e: Exception) {
             try {
-                val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${Uri.encode(endereco)}"))
-                startActivity(mapIntent)
+                val webUri = if (lat != 0.0 && lng != 0.0) {
+                    Uri.parse("https://waze.com/ul?ll=$lat,$lng&navigate=yes")
+                } else {
+                    Uri.parse("https://waze.com/ul?q=${Uri.encode(endereco)}&navigate=yes")
+                }
+                startActivity(Intent(Intent.ACTION_VIEW, webUri))
             } catch (ex: Exception) {
-                Toast.makeText(this, "Nenhum aplicativo de mapas disponível", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Não foi possível abrir o Waze no dispositivo", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun abrirGoogleMaps(lat: Double, lng: Double, endereco: String) {
+        try {
+            val uri = if (lat != 0.0 && lng != 0.0) {
+                Uri.parse("google.navigation:q=$lat,$lng&mode=d")
+            } else {
+                Uri.parse("google.navigation:q=${Uri.encode(endereco)}&mode=d")
+            }
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                `package` = "com.google.android.apps.maps"
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val fallbackUri = if (lat != 0.0 && lng != 0.0) {
+                    Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(endereco)})")
+                } else {
+                    Uri.parse("geo:0,0?q=${Uri.encode(endereco)}")
+                }
+                startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
+            } catch (ex: Exception) {
+                Toast.makeText(this, "Google Maps não encontrado", Toast.LENGTH_SHORT).show()
             }
         }
     }

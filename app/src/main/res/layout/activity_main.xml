@@ -72,14 +72,14 @@
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
-                <!-- Quick Test Button -->
+                <!-- Mute / Unmute Audio Button -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnQuickTest"
+                    android:id="@+id/btnMuteAudio"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:padding="0dp"
-                    android:text="🧪"
+                    android:text="🔊"
                     android:textSize="16sp"
                     android:textColor="@color/text_main" />
 
