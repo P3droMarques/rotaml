@@ -37,6 +37,8 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.rota.ml.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -59,6 +61,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var isAudioMuted = false
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val operacoesRotaMutex = Mutex()
+    private val rotasEmExclusao = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var capturaProjecaoAtiva = false
     private var solicitacaoProjecaoPendente = false
 
@@ -243,6 +247,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             webChromeClient = object : WebChromeClient() {
                 override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
                     callback?.invoke(origin, true, false)
+                }
+                override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult): Boolean {
+                    MaterialAlertDialogBuilder(this@MainActivity)
+                        .setMessage(message ?: "Confirmar?")
+                        .setPositiveButton("Confirmar") { _, _ -> result.confirm() }
+                        .setNegativeButton("Cancelar") { _, _ -> result.cancel() }
+                        .setOnCancelListener { result.cancel() }
+                        .show()
+                    return true
                 }
             }
             webViewClient = object : WebViewClient() {
@@ -667,6 +680,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun enfileirarMutacaoRota(acao: suspend () -> Unit) {
+        scope.launch(Dispatchers.Main) {
+            operacoesRotaMutex.withLock { withContext(Dispatchers.IO) { acao() } }
+        }
+    }
+
     fun firebaseSalvarRota(rotaId: String, rotaJsonStr: String, callback: ((Boolean, String) -> Unit)? = null) {
         val baseUrl = getFirebaseBaseUrl()
         if (baseUrl.isBlank()) {
@@ -685,7 +704,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .put(rotaJsonStr.toRequestBody("application/json".toMediaType()))
             .build()
 
-        scope.launch(Dispatchers.IO) {
+        enfileirarMutacaoRota {
             try {
                 val resp = client.newCall(request).execute()
                 if (resp.isSuccessful) {
@@ -721,7 +740,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val client = OkHttpClient()
         val request = Request.Builder().url(url).delete().build()
 
-        scope.launch(Dispatchers.IO) {
+        enfileirarMutacaoRota {
             try {
                 val resp = client.newCall(request).execute()
                 if (resp.isSuccessful) {
@@ -762,7 +781,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .patch(patchBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        scope.launch(Dispatchers.IO) {
+        enfileirarMutacaoRota {
             try {
                 val resp = client.newCall(request).execute()
                 if (resp.isSuccessful) {
@@ -800,7 +819,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .patch(patchBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        scope.launch(Dispatchers.IO) {
+        enfileirarMutacaoRota {
             try {
                 val resp = client.newCall(request).execute()
                 if (resp.isSuccessful) {
@@ -1755,21 +1774,30 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         @JavascriptInterface
         fun salvarRotaOffline(rotaId: String, jsonStr: String) {
+            if (rotasEmExclusao.contains(rotaId)) return
             prefs.edit()
                 .putString("offline_rota_$rotaId", jsonStr)
                 .putString("offline_rota_ativa_id", rotaId)
+                .remove("offline_rota_excluida_$rotaId")
                 .apply()
         }
 
         @JavascriptInterface
         fun obterRotaOffline(rotaId: String): String {
+            if (prefs.getBoolean("offline_rota_excluida_$rotaId", false)) return ""
             return prefs.getString("offline_rota_$rotaId", "") ?: ""
+        }
+
+        @JavascriptInterface
+        fun rotaFoiExcluida(rotaId: String): Boolean {
+            return prefs.getBoolean("offline_rota_excluida_$rotaId", false)
         }
 
         @JavascriptInterface
         fun obterUltimaRotaAtivaOffline(): String {
             val id = prefs.getString("offline_rota_ativa_id", "") ?: ""
             if (id.isBlank()) return ""
+            if (prefs.getBoolean("offline_rota_excluida_$id", false)) return ""
             return prefs.getString("offline_rota_$id", "") ?: ""
         }
 
@@ -1846,17 +1874,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
-        fun listarRotasNuvem() {
+        fun listarRotasNuvem(requestId: String) {
             firebaseListarRotas { success, msg, data ->
                 runOnUiThread {
                     val safeData = if (success && data != null && data != "null" && data.isNotBlank()) data else "{}"
-                    binding.webView.evaluateJavascript("if (window.receberListaRotasFirebase) window.receberListaRotasFirebase($safeData, $success, '${msg.replace("'", "\\'")}');", null)
+                    binding.webView.evaluateJavascript("if (window.receberListaRotasFirebase) window.receberListaRotasFirebase($safeData, $success, ${JSONObject.quote(msg)}, ${JSONObject.quote(requestId)});", null)
                 }
             }
         }
 
         @JavascriptInterface
         fun salvarRotaAuto(rotaId: String, rotaJsonStr: String) {
+            if (rotasEmExclusao.contains(rotaId)) return
             firebaseSalvarRota(rotaId, rotaJsonStr) { success, msg ->
                 runOnUiThread {
                     if (success) {
@@ -1870,27 +1899,46 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         @JavascriptInterface
         fun excluirRotaNuvem(rotaId: String) {
-            firebaseExcluirRota(rotaId) { _, msg ->
+            if (!rotasEmExclusao.add(rotaId)) return
+            firebaseExcluirRota(rotaId) { success, msg ->
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-                    binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
-                    listarRotasNuvem()
+                    if (success) {
+                        prefs.edit().apply {
+                            remove("offline_rota_$rotaId")
+                            putBoolean("offline_rota_excluida_$rotaId", true)
+                            if (prefs.getString("offline_rota_ativa_id", "") == rotaId) remove("offline_rota_ativa_id")
+                            apply()
+                        }
+                    } else {
+                        rotasEmExclusao.remove(rotaId)
+                    }
+                    binding.webView.evaluateJavascript(
+                        "if(window.onRotaExcluida) window.onRotaExcluida(${JSONObject.quote(rotaId)}, $success, ${JSONObject.quote(msg)});",
+                        null
+                    )
                 }
             }
         }
 
         @JavascriptInterface
+        fun confirmarExclusaoProcessada(rotaId: String) {
+            rotasEmExclusao.remove(rotaId)
+        }
+
+        @JavascriptInterface
         fun atualizarStatusParadaNuvem(rotaId: String, paradaIndex: Int, finalizada: Boolean, finalizadaEm: String) {
+            if (rotasEmExclusao.contains(rotaId)) return
             firebaseAtualizarStatusParada(rotaId, paradaIndex, finalizada, finalizadaEm)
         }
 
         @JavascriptInterface
         fun finalizarRotaNuvem(rotaId: String, status: String) {
+            if (rotasEmExclusao.contains(rotaId)) return
             firebaseFinalizarRota(rotaId, status) { _, msg ->
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
                     binding.webView.evaluateJavascript("showToast('${msg.replace("'", "\\'")}');", null)
-                    listarRotasNuvem()
+                    binding.webView.evaluateJavascript("recarregarRotasNuvem();", null)
                 }
             }
         }

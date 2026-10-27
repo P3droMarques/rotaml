@@ -1452,9 +1452,9 @@
                 setAudioMuted: function(m) {
                     isAudioMuted = m;
                 },
-                listarRotasNuvem: function() {
+                listarRotasNuvem: function(requestId) {
                     setTimeout(() => {
-                        window.receberListaRotasFirebase(todasRotasNuvem, true, "OK");
+                        window.receberListaRotasFirebase(todasRotasNuvem, true, "OK", requestId);
                     }, 300);
                 },
                 salvarRotaAuto: function(id, json) {
@@ -1490,8 +1490,7 @@
                 },
                 excluirRotaNuvem: function(id) {
                     delete todasRotasNuvem[id];
-                    localStorage.removeItem('offline_rota_' + id);
-                    window.receberListaRotasFirebase(todasRotasNuvem, true, "Excluído");
+                    window.onRotaExcluida(id, true, 'Rota excluída.');
                 },
                 atualizarStatusParadaNuvem: function(id, index, finalizada, hora) {
                     console.log("[Firebase Parada Update]", id, index, finalizada, hora);
@@ -1505,6 +1504,8 @@
 
         // Global State
         let todasRotasNuvem = {};
+        let solicitacaoListaRotas = 0;
+        const exclusoesPendentes = new Set();
         let rotaAtivaId = null;
         let rotaAtivaMeta = {
             id: null,
@@ -2033,6 +2034,7 @@
         }
 
         function executarOtimizacaoRota() {
+            if (rotaAtivaId && exclusoesPendentes.has(rotaAtivaId)) { showToast('Aguarde a exclusão da rota.'); return; }
             if (rotaAtual.length === 0) {
                 showToast("Nenhuma rota carregada para otimizar!");
                 return;
@@ -2302,6 +2304,7 @@
         }
 
         window.confirmarBipe = function(code) {
+            if (rotaAtivaId && exclusoesPendentes.has(rotaAtivaId)) { showToast('Aguarde a exclusão da rota.'); return; }
             if (!code) return;
             code = code.toString().trim();
             const resultBox = document.getElementById('bipe-result');
@@ -2518,6 +2521,7 @@
         // FINALIZAÇÃO DE PARADAS E ROTAS (DA LISTA E DO MAPA)
         // -------------------------------------------------------------
         function alternarFinalizarParada(index) {
+            if (rotaAtivaId && exclusoesPendentes.has(rotaAtivaId)) { showToast('Aguarde a exclusão da rota.'); return; }
             let p = rotaAtual[index];
             if (!p) return;
 
@@ -2558,6 +2562,7 @@
         }
 
         function alternarFinalizarRotaAtiva() {
+            if (rotaAtivaId && exclusoesPendentes.has(rotaAtivaId)) { showToast('Aguarde a exclusão da rota.'); return; }
             if (!rotaAtivaId || rotaAtual.length === 0) {
                 showToast("Nenhuma rota carregada para finalizar!");
                 return;
@@ -2899,7 +2904,7 @@
         // HUB DE ROTAS: GESTÃO COMPARTILHADA NO FIREBASE & OFFLINE
         // -------------------------------------------------------------
         function salvarEstadoRotaAtivaNoBanco() {
-            if (!rotaAtivaId || rotaAtual.length === 0) return;
+            if (!rotaAtivaId || rotaAtual.length === 0 || exclusoesPendentes.has(rotaAtivaId)) return;
             let concluidas = rotaAtual.filter(p => p.finalizada).length;
             let total = rotaAtual.length;
             let status = (concluidas === total && total > 0) ? "finalizada" : (rotaAtivaMeta.status || "em_andamento");
@@ -2948,16 +2953,18 @@
         }
 
         function recarregarRotasNuvem() {
+            const requestId = String(++solicitacaoListaRotas);
             const statusEl = document.getElementById('sync-rotas-status');
             if (statusEl) { statusEl.innerText = "🔄 Sincronizando..."; statusEl.style.color = "var(--ml-yellow)"; }
             if (window.Android && window.Android.listarRotasNuvem) {
-                window.Android.listarRotasNuvem();
+                window.Android.listarRotasNuvem(requestId);
             } else {
-                window.receberListaRotasFirebase(todasRotasNuvem, true, "OK");
+                window.receberListaRotasFirebase(todasRotasNuvem, true, "OK", requestId);
             }
         }
 
-        window.receberListaRotasFirebase = function(data, success, msg) {
+        window.receberListaRotasFirebase = function(data, success, msg, requestId) {
+            if (requestId != null && requestId !== String(solicitacaoListaRotas)) return;
             const container = document.getElementById('lista-rotas-container');
             const counterEl = document.getElementById('total-rotas-contador');
             const statusEl = document.getElementById('sync-rotas-status');
@@ -2984,7 +2991,7 @@
             for (let key in rotasObj) {
                 let item = rotasObj[key];
                 if (item && typeof item === 'object') {
-                    if (!item.id) item.id = key;
+                    item.id = key;
                     if (key === 'atual' && item.paradas) {
                         item.titulo = item.titulo || "Rota Salva Anterior";
                     }
@@ -3019,10 +3026,17 @@
             if (offlineStr) {
                 try {
                     let offlineRota = JSON.parse(offlineStr);
+                    if (window.Android && window.Android.rotaFoiExcluida && window.Android.rotaFoiExcluida(offlineRota.id)) {
+                        localStorage.removeItem('offline_rota_' + offlineRota.id);
+                        localStorage.removeItem('offline_rota_ativa');
+                    } else {
                     todasRotasNuvem[offlineRota.id] = offlineRota;
+                    const counterEl = document.getElementById('total-rotas-contador');
+                    if (counterEl) counterEl.innerText = '1';
                     renderizarCartoesRotas([offlineRota]);
                     showToast("📡 Carregando dados da rota salva na memória offline");
                     return;
+                    }
                 } catch (e) {}
             }
 
@@ -3090,13 +3104,13 @@
                         </div>
 
                         <div class="route-card-actions">
-                            <button class="btn-route-action primary" onclick="abrirRotaNuvem('${r.id}')">
+                            <button class="btn-route-action primary" data-rota-id="${escaparTexto(r.id)}" onclick="abrirRotaNuvem(this.dataset.rotaId)">
                                 ${isAtiva ? '📍 Em Uso (Abrir)' : '🚀 Abrir Rota'}
                             </button>
-                            <button class="btn-route-action ${isFinalizada ? 'success' : ''}" onclick="alternarStatusRotaCard('${r.id}', '${isFinalizada ? 'em_andamento' : 'finalizada'}')">
+                            <button class="btn-route-action ${isFinalizada ? 'success' : ''}" data-rota-id="${escaparTexto(r.id)}" onclick="alternarStatusRotaCard(this.dataset.rotaId, '${isFinalizada ? 'em_andamento' : 'finalizada'}')">
                                 ${isFinalizada ? '↩️ Reabrir' : '🏁 Finalizar'}
                             </button>
-                            <button class="btn-route-action danger" onclick="excluirRotaNuvem('${r.id}', '${(r.titulo || '').replace(/'/g, "\\'")}')">
+                            <button class="btn-route-action danger" data-rota-id="${escaparTexto(r.id)}" data-rota-titulo="${escaparTexto(r.titulo || '')}" onclick="excluirRotaNuvem(this.dataset.rotaId, this.dataset.rotaTitulo)">
                                 🗑️ Excluir
                             </button>
                         </div>
@@ -3108,6 +3122,7 @@
         }
 
         function abrirRotaNuvem(rotaId) {
+            if (exclusoesPendentes.has(rotaId)) { showToast('Aguarde a exclusão da rota.'); return; }
             let rotaObj = todasRotasNuvem[rotaId];
             if (!rotaObj) {
                 // Tenta carregar offline
@@ -3116,7 +3131,8 @@
                     offlineStr = window.Android.obterRotaOffline(rotaId);
                 }
                 if (!offlineStr) {
-                    offlineStr = localStorage.getItem('offline_rota_' + rotaId) || "";
+                    const foiExcluida = window.Android && window.Android.rotaFoiExcluida && window.Android.rotaFoiExcluida(rotaId);
+                    if (!foiExcluida) offlineStr = localStorage.getItem('offline_rota_' + rotaId) || "";
                 }
                 if (offlineStr) {
                     try { rotaObj = JSON.parse(offlineStr); } catch (e) {}
@@ -3206,28 +3222,56 @@
         }
 
         function excluirRotaNuvem(rotaId, titulo) {
-            if (confirm(`Deseja realmente excluir a rota "${titulo || rotaId}" do banco de dados na nuvem?\n\nEla será apagada permanentemente de todos os celulares.`)) {
-                if (rotaAtivaId === rotaId) {
-                    rotaAtivaId = null;
-                    rotaAtual = [];
-                    rotaBrutaOriginal = [];
-                    rotaOrigem = null;
-                    rotaCasa = null;
-                    rotaPlanejadaInfo = null;
-                    distanciaRestanteMetros = null;
-                    rotaGeometriaRuasCache = null;
-                    document.getElementById('banner-rota-ativa').style.display = 'none';
-                    renderizarParadas();
-                    renderizarMapa();
-                }
-                if (window.Android && window.Android.excluirRotaNuvem) {
-                    window.Android.excluirRotaNuvem(rotaId);
-                } else {
-                    delete todasRotasNuvem[rotaId];
-                    window.receberListaRotasFirebase(todasRotasNuvem, true, "Excluído");
-                }
-            }
+            if (exclusoesPendentes.has(rotaId)) return;
+            if (!confirm(`Deseja excluir a rota "${titulo || rotaId}"?\n\nEla será removida da nuvem e deste aparelho.`)) return;
+            exclusoesPendentes.add(rotaId);
+            showToast('Excluindo rota...');
+            if (window.Android && window.Android.excluirRotaNuvem) window.Android.excluirRotaNuvem(rotaId);
+            else window.onRotaExcluida(rotaId, false, 'Não foi possível excluir a rota.');
         }
+
+        window.onRotaExcluida = function(rotaId, success, mensagem) {
+            if (!exclusoesPendentes.has(rotaId)) return;
+            if (!success) {
+                exclusoesPendentes.delete(rotaId);
+                showToast((mensagem || 'Não foi possível excluir.') + ' A rota foi mantida no aparelho.');
+                return;
+            }
+            // Ignora respostas de listagens iniciadas antes da exclusão.
+            solicitacaoListaRotas++;
+            delete todasRotasNuvem[rotaId];
+            try {
+                localStorage.removeItem('offline_rota_' + rotaId);
+                const ativa = localStorage.getItem('offline_rota_ativa');
+                if (ativa && JSON.parse(ativa).id === rotaId) localStorage.removeItem('offline_rota_ativa');
+            } catch (e) { console.warn('Falha ao limpar a rota local', e); }
+            if (rotaAtivaId === rotaId) {
+                rotaAtivaId = null;
+                rotaAtivaMeta = { status: 'em_andamento' };
+                rotaAtual = [];
+                rotaBrutaOriginal = [];
+                rotaOrigem = null;
+                rotaCasa = null;
+                rotaPlanejadaInfo = null;
+                distanciaRestanteMetros = null;
+                rotaGeometriaRuasCache = null;
+                rotaGeometriaConsulta = null;
+                rotaGeometriaProximaCache = null;
+                rotaGeometriaProximaConsulta = null;
+                otimizacaoPendente = null;
+                pacotesBipados.clear();
+                historicoBipes = [];
+                document.getElementById('banner-rota-ativa').style.display = 'none';
+                atualizarEstatisticas();
+                renderizarParadas();
+                renderizarZonasCarro();
+                renderizarMapa();
+            }
+            exclusoesPendentes.delete(rotaId);
+            if (window.Android && window.Android.confirmarExclusaoProcessada) window.Android.confirmarExclusaoProcessada(rotaId);
+            showToast(mensagem || 'Rota excluída.');
+            recarregarRotasNuvem();
+        };
 
         // -------------------------------------------------------------
         // CARREGAMENTO E CRIAÇÃO AUTOMÁTICA DE ROTAS
@@ -3371,7 +3415,12 @@
             if (rotaSalvaLocal) {
                 try {
                     let rObj = JSON.parse(rotaSalvaLocal);
-                    todasRotasNuvem[rObj.id] = rObj;
+                    if (window.Android && window.Android.rotaFoiExcluida && window.Android.rotaFoiExcluida(rObj.id)) {
+                        localStorage.removeItem('offline_rota_' + rObj.id);
+                        localStorage.removeItem('offline_rota_ativa');
+                    } else {
+                        todasRotasNuvem[rObj.id] = rObj;
+                    }
                 } catch (e) {}
             }
 
