@@ -25,6 +25,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -333,6 +334,10 @@ class LeitorEnviosService : AccessibilityService() {
 
         } catch (e: Exception) {
             Log.e("LeitorEnviosService", "Não foi possível exibir overlay flutuante: ${e.message}")
+            capturando = false
+            mainHandler.removeCallbacks(capturaOcrRunnable)
+            onUpdateListener?.invoke(textosCapturados.size, 0)
+            Toast.makeText(this, "Não foi possível mostrar o overlay. Reative a acessibilidade do RotaML e tente novamente.", Toast.LENGTH_LONG).show()
         }
     }
 

@@ -345,18 +345,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        val leitor = LeitorEnviosService.instance
+        if (leitor == null || !LeitorEnviosService.isRunning) {
+            // O Android pode levar alguns instantes para conectar o serviço
+            // depois que a acessibilidade foi ativada. Não marque a captura
+            // como ativa sem um serviço real: isso criava um estado falso,
+            // sem overlay e sem OCR.
+            Toast.makeText(this, "O leitor ainda está iniciando. Abra a Acessibilidade, aguarde alguns segundos e tente novamente.", Toast.LENGTH_LONG).show()
+            try {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } catch (_: Exception) {}
+            return
+        }
+
         if (!LeitorEnviosService.capturando) {
-            LeitorEnviosService.instance?.iniciarCapturaComOverlay() ?: run {
-                LeitorEnviosService.capturando = true
-                LeitorEnviosService.limpar()
-            }
+            leitor.iniciarCapturaComOverlay()
             binding.btnLer.text = "⏹ Lendo (0)..."
             binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
             Toast.makeText(this, "Abra o app Envios Extra e role a lista devagar. A tela visível será lida automaticamente.", Toast.LENGTH_LONG).show()
         } else {
-            LeitorEnviosService.instance?.pararCapturaEFecharOverlay() ?: run {
-                LeitorEnviosService.capturando = false
-            }
+            leitor.pararCapturaEFecharOverlay()
             val total = LeitorEnviosService.paradasDetectadas.size
             binding.btnLer.text = if (total > 0) "1. Ler Tela ($total)" else "1. Ler Tela"
             binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
