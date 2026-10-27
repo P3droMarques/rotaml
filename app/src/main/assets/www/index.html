@@ -1165,6 +1165,7 @@
                         <span id="waze-speed-badge" class="waze-sub-pill speed">
                             🚗 Parado
                         </span>
+                        <span id="gps-status-badge" class="waze-sub-pill">GPS: aguardando</span>
                         <button id="btn-seguir-carro-hud" class="waze-sub-pill follow-toggle" onclick="toggleSeguirCarro()">
                             🎯 Seguir Carro
                         </button>
@@ -1173,6 +1174,7 @@
 
                 <!-- Floating Controls Overlay Bottom -->
                 <div class="map-controls-overlay">
+                    <button class="btn-map-control" id="btn-map-som" onclick="toggleMuteSound()" aria-label="Ativar ou silenciar avisos de voz">🔊 Som</button>
                     <button class="btn-map-control" onclick="centralizarNoVeiculo()" aria-label="Centralizar na minha localização">
                         ⌖ Minha posição
                     </button>
@@ -1358,6 +1360,11 @@
                 btnSound.innerHTML = isAudioMuted ? '🔇 Mudo' : '🔊 Som';
                 btnSound.style.color = isAudioMuted ? '#ef4444' : '#10b981';
             }
+            const btnMapSound = document.getElementById('btn-map-som');
+            if (btnMapSound) {
+                btnMapSound.textContent = isAudioMuted ? '🔇 Som desligado' : '🔊 Som ligado';
+                btnMapSound.setAttribute('aria-pressed', String(isAudioMuted));
+            }
         }
 
         function toggleMuteSound() {
@@ -1454,13 +1461,13 @@
                 obterUltimaRotaAtivaOffline: function() {
                     return localStorage.getItem('offline_rota_ativa') || "";
                 },
-                buscarGeometriaRuasOSRM: function(coordsList) {
+                buscarGeometriaRuasOSRM: function(coordsList, requestId) {
                     let url = `https://router.project-osrm.org/route/v1/driving/${coordsList}?overview=full&geometries=geojson`;
                     fetch(url).then(r => r.json()).then(data => {
                         let coords = data.routes && data.routes[0] ? data.routes[0].geometry.coordinates : [];
-                        window.receberGeometriaRuasOSRM(coords, true);
+                        window.receberGeometriaRuasOSRM(coords, true, requestId);
                     }).catch(() => {
-                        window.receberGeometriaRuasOSRM([], false);
+                        window.receberGeometriaRuasOSRM([], false, requestId);
                     });
                 },
                 solicitarRastreamentoGPS: function() {
@@ -1515,6 +1522,9 @@
         let polylineBorder = null;
         let polylineBruta = null;
         let rotaGeometriaRuasCache = null; // Cache das curvas das ruas
+        let rotaGeometriaConsulta = null;
+        let ultimaAtualizacaoOrigem = 0;
+        let otimizacaoPendente = null;
 
         // GPS Car Tracker State
         let carMarker = null;
@@ -1522,6 +1532,7 @@
         let carHeading = 0;
         let carSpeedKmh = 0;
         let carAccuracy = 0;
+        let carFixTime = 0;
         let carAnimation = null;
         let isSeguirCarroAtivo = false;
 
@@ -1539,9 +1550,9 @@
                 }).setView([-22.8850, -47.0580], 14); // Centro Campinas
 
                 // Camada OpenStreetMap com fallback offline
-                let tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                let tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
                 });
                 tileLayer.on('tileerror', function() {
                     // Se estiver sem internet, o mapa mantém canvas escuro e as ruas continuam visíveis!
@@ -1591,12 +1602,26 @@
             });
         }
 
-        window.atualizarPosicaoCarro = function(lat, lng, bearing, speedKmh, accuracy) {
+        window.atualizarPosicaoCarro = function(lat, lng, bearing, speedKmh, accuracy, fixTime) {
             if (!lat || !lng) return;
+            const fix = Number(fixTime) || Date.now();
+            if (fix < carFixTime) return;
             carLatLng = [lat, lng];
             carHeading = bearing || 0;
             carSpeedKmh = Math.max(0, Math.round(speedKmh || 0));
-            carAccuracy = Math.max(0, accuracy || 0);
+            carAccuracy = accuracy != null && Number.isFinite(Number(accuracy)) && Number(accuracy) >= 0 ? Number(accuracy) : null;
+            carFixTime = fix;
+            atualizarStatusGps();
+
+            if (rotaAtual.some(p => !p.finalizada) && (!rotaOrigem || !rotaOrigem.lat ||
+                (Date.now() - ultimaAtualizacaoOrigem > 30000 && calcDistanceKm(lat, lng, rotaOrigem.lat, rotaOrigem.lng) > 0.1))) {
+                rotaOrigem = { lat, lng, endereco: 'Sua localização atual', capturada_em: Date.now() };
+                ultimaAtualizacaoOrigem = Date.now();
+                rotaGeometriaRuasCache = null;
+                rotaGeometriaConsulta = null;
+                if (rotaPlanejadaInfo) rotaPlanejadaInfo.distancia_m = 0;
+                if (map) renderizarMapa();
+            }
 
             // Atualiza HUD no mapa
             const speedEl = document.getElementById('waze-speed-badge');
@@ -1627,7 +1652,7 @@
                 carAnimation = requestAnimationFrame(animate);
                 carMarker.setIcon(criarIconeCarro(bearing));
             }
-            carMarker.setPopupContent(`<b>Sua posição</b><br>Velocidade: ${carSpeedKmh} km/h<br>Precisão GPS: ±${Math.round(carAccuracy)} m`);
+            carMarker.setPopupContent(`<b>Sua posição</b><br>Velocidade: ${carSpeedKmh} km/h<br>${carAccuracy == null ? 'Precisão indisponível' : 'Precisão GPS: ±' + Math.round(carAccuracy) + ' m'}`);
 
             // Modo Seguir Carro (Navegação Ativa)
             if (isSeguirCarroAtivo && map) {
@@ -1637,6 +1662,23 @@
             // Atualiza card de Próxima Parada
             atualizarProximaParadaDistancia();
         };
+
+        function atualizarStatusGps() {
+            const badge = document.getElementById('gps-status-badge');
+            if (!badge) return;
+            const idade = Date.now() - carFixTime;
+            if (!carFixTime || idade > 30000) {
+                badge.textContent = carFixTime ? 'GPS: sinal desatualizado' : 'GPS: aguardando';
+                badge.style.color = '#fbbf24';
+            } else if (carAccuracy == null || carAccuracy > 100) {
+                badge.textContent = 'GPS: baixa precisão';
+                badge.style.color = '#fbbf24';
+            } else {
+                badge.textContent = `GPS: ±${Math.round(carAccuracy)} m`;
+                badge.style.color = '#42e5c1';
+            }
+        }
+        setInterval(atualizarStatusGps, 5000);
 
         function toggleSeguirCarro() {
             isSeguirCarroAtivo = !isSeguirCarroAtivo;
@@ -1760,7 +1802,7 @@
                 setTimeout(() => {
                     if (map) {
                         map.invalidateSize();
-                        if (carLatLng && !carMarker) window.atualizarPosicaoCarro(carLatLng[0], carLatLng[1], carHeading, carSpeedKmh, carAccuracy);
+                        if (carLatLng && !carMarker) window.atualizarPosicaoCarro(carLatLng[0], carLatLng[1], carHeading, carSpeedKmh, carAccuracy, carFixTime);
                         renderizarMapa();
                         if (isSeguirCarroAtivo && carLatLng) {
                             map.setView(carLatLng, Math.max(map.getZoom(), 16));
@@ -1839,7 +1881,7 @@
         function obterSequenciaCompletaRota() {
             const pontos = [];
             if (rotaOrigem && rotaOrigem.lat && rotaOrigem.lng) pontos.push(rotaOrigem);
-            pontos.push(...rotaAtual);
+            pontos.push(...rotaAtual.filter(p => !p.finalizada));
             if (rotaCasa && rotaCasa.lat && rotaCasa.lng) pontos.push(rotaCasa);
             return pontos;
         }
@@ -1924,35 +1966,23 @@
                 return;
             }
 
-            if (rotaOrigem && rotaCasa) {
-                showToast("✅ Esta rota já foi otimizada pelas ruas, saindo da sua posição e terminando em casa.");
-                switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2]);
-                baixarGeometriaRuasReais();
+            const pendentes = rotaAtual.filter(p => !p.finalizada);
+            if (!pendentes.length) {
+                showToast('Todas as paradas já foram concluídas.');
                 return;
             }
-
-            let distAntes = calcularDistanciaTotalRota(obterSequenciaCompletaRota());
-            rotaAtual = otimizarPontosTSP(rotaAtual);
-            let distDepois = calcularDistanciaTotalRota(obterSequenciaCompletaRota());
-            let economia = (distAntes - distDepois).toFixed(1);
-            let perc = distAntes > 0 ? (((distAntes - distDepois) / distAntes) * 100).toFixed(0) : 0;
-
-            isRotaOtimizada = true;
-            rotaGeometriaRuasCache = null; // Força recálculo do traçado das ruas reais
-
-            atualizarEstatisticas();
-            renderizarParadas();
-            renderizarZonasCarro();
-            switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2]);
-            renderizarMapa();
-
-            let speakMsg = `Rota otimizada! ${rotaAtual.length} paradas na melhor sequência. Economia de ${economia} quilômetros.`;
-            if (!isAudioMuted && window.Android && window.Android.speak) {
-                window.Android.speak(speakMsg);
+            if (otimizacaoPendente) {
+                showToast('Aguarde o cálculo da rota.');
+                return;
             }
-            showToast(`🚀 Rota Otimizada! Economia de ${economia} km (${perc}%)!`);
-            salvarEstadoRotaAtivaNoBanco();
-            baixarGeometriaRuasReais();
+            if (!window.Android || !window.Android.recalcularRotaSalvaPartindoDoGPS) {
+                showToast('O cálculo com GPS está disponível no aplicativo Android.');
+                return;
+            }
+            const requestId = String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+            otimizacaoPendente = { id: requestId, rotaId: rotaAtivaId, paradas: JSON.stringify(rotaAtual) };
+            showToast('Calculando pelas ruas a partir do GPS...');
+            window.Android.recalcularRotaSalvaPartindoDoGPS(JSON.stringify(pendentes), JSON.stringify(rotaCasa), requestId);
         }
 
         function alternarVisaoRota() {
@@ -2016,13 +2046,17 @@
             }
 
             let coordsStr = pontosComCoords.map(p => `${p.lng},${p.lat}`).join(';');
+            if (rotaGeometriaConsulta === coordsStr) return;
+            rotaGeometriaConsulta = coordsStr;
             
             // 1. Tentar nativo Android com servidores múltiplos
             let respondeuNativo = false;
             if (window.Android && window.Android.buscarGeometriaRuasOSRM) {
-                window.Android.buscarGeometriaRuasOSRM(coordsStr);
+                window.Android.buscarGeometriaRuasOSRM(coordsStr, coordsStr);
                 respondeuNativo = true;
             }
+
+            if (respondeuNativo) return;
 
             // 2. Fallback Web direto em paralelo (caso Android demore ou retorne vazio)
             setTimeout(() => {
@@ -2037,7 +2071,7 @@
                             if (!rotaGeometriaRuasCache) {
                                 // Fallback inteligente offline: traçado ortogonal em quarteirões (sem cruzar prédios!)
                                 let offlineGrid = construirMalhaOrtogonalOffline(pontosComCoords);
-                                window.receberGeometriaRuasOSRM(offlineGrid, false);
+                                window.receberGeometriaRuasOSRM(offlineGrid, false, coordsStr);
                             }
                             return;
                         }
@@ -2046,7 +2080,7 @@
                             .then(data => {
                                 if (data.routes && data.routes[0] && data.routes[0].geometry) {
                                     let coords = data.routes[0].geometry.coordinates;
-                                    window.receberGeometriaRuasOSRM(coords, true);
+                                    window.receberGeometriaRuasOSRM(coords, true, coordsStr);
                                 } else {
                                     tentarUrl(idx + 1);
                                 }
@@ -2058,22 +2092,19 @@
             }, respondeuNativo ? 3200 : 50);
         }
 
-        window.receberGeometriaRuasOSRM = function(coordsGeoJson, success) {
+        window.receberGeometriaRuasOSRM = function(coordsGeoJson, success, requestId) {
+            if (requestId !== rotaGeometriaConsulta) return;
             if (success && Array.isArray(coordsGeoJson) && coordsGeoJson.length > 0) {
                 // Inverte [lng, lat] para Leaflet [lat, lng]
-                rotaGeometriaRuasCache = coordsGeoJson.map(c => {
-                    if (c[0] < -30 && c[1] > -30) {
-                        return [c[1], c[0]];
-                    }
-                    return [c[0], c[1]];
-                });
+                rotaGeometriaRuasCache = coordsGeoJson.map(c => [c[1], c[0]]);
                 renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
                 salvarEstadoRotaAtivaNoBanco();
             } else if (!rotaGeometriaRuasCache) {
                 // Fallback offline estruturado em quarteirões (esquinas a 90 graus)
                 let pontosComCoords = obterSequenciaCompletaRota().filter(p => p.lat && p.lng);
-                let fallback = construirMalhaOrtogonalOffline(pontosComCoords);
+                let fallback = pontosComCoords.map(p => [p.lat, p.lng]);
                 renderizarTrilhasRuas(fallback, false);
+                showToast('Não foi possível carregar o trajeto pelas ruas. Confira a internet.');
             }
         };
 
@@ -2095,17 +2126,18 @@
 
             // 2. Linha azul/ciano néon Waze (#00d2ff) seguindo as esquinas e ruas reais!
             polylineRuas = L.polyline(latlngs, {
-                color: '#00d2ff',
+                color: isReal ? '#00a9eb' : '#8e9ba9',
                 weight: 6,
                 opacity: 1.0,
                 smoothFactor: 1.0,
                 lineJoin: 'round',
-                lineCap: 'round'
+                lineCap: 'round',
+                dashArray: isReal ? null : '8 10'
             }).addTo(map);
 
             const titleEl = document.getElementById('waze-route-title');
             if (titleEl) {
-                let titulo = isReal ? `⚡ Rota nas Ruas (${rotaAtual.length} paradas)` : `📡 Traçado Offline (${rotaAtual.length} paradas)`;
+                let titulo = isReal ? `Rota pelas ruas (${rotaAtual.filter(p => !p.finalizada).length} paradas)` : 'Traçado estimado, sem ruas';
                 if (rotaCasa) titulo += ' → 🏠 Casa';
                 if (rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0) {
                     titulo += ` • ${(Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1)} km`;
@@ -2376,6 +2408,8 @@
             if (!p) return;
 
             p.finalizada = !p.finalizada;
+            rotaGeometriaRuasCache = null;
+            rotaGeometriaConsulta = null;
             if (p.finalizada) {
                 p.finalizadaEm = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 if (p.pacotes) {
@@ -2722,7 +2756,8 @@
                 renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
             } else if (latlngs.length > 0) {
                 // Desenha linha inicial e busca ruas reais no OSRM
-                renderizarTrilhasRuas(latlngs, false);
+                const pontos = obterSequenciaCompletaRota().filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]);
+                renderizarTrilhasRuas(pontos, false);
                 baixarGeometriaRuasReais();
             }
 
@@ -2987,6 +3022,14 @@
 
             // Restaura curvas das ruas salvas
             rotaGeometriaRuasCache = (rotaObj.geometria_ruas && rotaObj.geometria_ruas.length > 0) ? rotaObj.geometria_ruas : null;
+            rotaGeometriaConsulta = null;
+            otimizacaoPendente = null;
+            if (carLatLng) {
+                rotaOrigem = { lat: carLatLng[0], lng: carLatLng[1], endereco: 'Sua localização atual', capturada_em: Date.now() };
+                ultimaAtualizacaoOrigem = Date.now();
+                rotaGeometriaRuasCache = null;
+                if (rotaPlanejadaInfo) rotaPlanejadaInfo.distancia_m = 0;
+            }
 
             pacotesBipados.clear();
             rotaAtual.forEach(p => {
@@ -3019,15 +3062,6 @@
                 baixarGeometriaRuasReais();
             }
 
-            // Rotas antigas podem ter sido salvas com outra posição de início.
-            // Ao abrir uma rota ainda não iniciada, recalcula a origem com o
-            // GPS atual para que o trecho até a primeira parada não desapareça.
-            const todosTemCoordenadas = rotaAtual.every(p => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)));
-            const nenhumaEntregaIniciada = rotaAtual.every(p => !p.finalizada);
-            if (window.Android && window.Android.recalcularRotaSalvaPartindoDoGPS && rotaCasa && todosTemCoordenadas && nenhumaEntregaIniciada) {
-                showToast("📍 Atualizando a rota a partir da sua localização atual...");
-                window.Android.recalcularRotaSalvaPartindoDoGPS(JSON.stringify(rotaAtual), JSON.stringify(rotaCasa));
-            }
         }
 
         function alternarStatusRotaCard(rotaId, novoStatus) {
@@ -3066,16 +3100,35 @@
         // -------------------------------------------------------------
         // CARREGAMENTO E CRIAÇÃO AUTOMÁTICA DE ROTAS
         // -------------------------------------------------------------
-        window.atualizarRotaPartindoDoGPS = function(paradas, origem, casa, routeInfo) {
-            if (!Array.isArray(paradas) || paradas.length === 0 || !origem || !casa) return;
+        window.falhaOtimizacao = function(requestId, mensagem) {
+            if (!otimizacaoPendente || otimizacaoPendente.id !== requestId) return;
+            otimizacaoPendente = null;
+            showToast(mensagem);
+        };
+
+        window.atualizarRotaPartindoDoGPS = function(paradas, origem, casa, routeInfo, requestId) {
+            if (!otimizacaoPendente || otimizacaoPendente.id !== requestId) return;
+            const solicitacao = otimizacaoPendente;
+            otimizacaoPendente = null;
+            if (solicitacao.rotaId !== rotaAtivaId || solicitacao.paradas !== JSON.stringify(rotaAtual)) {
+                showToast('A rota mudou durante o cálculo. Toque em Otimizar novamente.');
+                return;
+            }
+            if (!Array.isArray(paradas) || paradas.length === 0 || !origem) {
+                showToast('Não foi possível calcular a rota. Tente novamente.');
+                return;
+            }
 
             rotaOrigem = { ...origem };
-            rotaCasa = { ...casa };
+            rotaCasa = casa ? { ...casa } : null;
             rotaPlanejadaInfo = routeInfo && typeof routeInfo === 'object' ? { ...routeInfo } : null;
-            rotaBrutaOriginal = paradas.map(p => ({ ...p }));
+            let indicePendente = 0;
+            rotaBrutaOriginal = rotaAtual.map(p => p.finalizada ? { ...p } : { ...paradas[indicePendente++] });
             rotaAtual = aplicarMetadadosParadas(rotaBrutaOriginal.map(p => ({ ...p })));
             isRotaOtimizada = true;
             rotaGeometriaRuasCache = null;
+            rotaGeometriaConsulta = null;
+            ultimaAtualizacaoOrigem = Date.now();
 
             atualizarEstatisticas();
             renderizarParadas();
@@ -3087,7 +3140,10 @@
             const km = rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0
                 ? ` • ${(Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1)} km pelas ruas`
                 : '';
-            showToast(`✅ Rota recalculada do GPS atual até sua casa${km}`);
+            const original = rotaPlanejadaInfo && rotaPlanejadaInfo.distancia_original_m;
+            const economia = original != null ? Math.max(0, Number(original) - Number(rotaPlanejadaInfo.distancia_m)) : null;
+            const resultado = economia != null && economia >= 50 ? ` • economia de ${(economia / 1000).toFixed(1)} km` : '';
+            showToast(`Rota recalculada a partir do GPS${rotaCasa ? ' até casa' : ''}${km}${resultado}`);
         };
 
         window.carregarRota = function(paradas, rotaIdOpcional, tituloOpcional, origemOpcional, casaOpcional, routeInfoOpcional) {
@@ -3105,6 +3161,7 @@
                 : otimizarPontosTSP(rotaBrutaOriginal);
             isRotaOtimizada = true;
             rotaGeometriaRuasCache = null; // Calcula ruas no OSRM
+            rotaGeometriaConsulta = null;
 
             pacotesBipados.clear();
             historicoBipes = [];
@@ -3145,7 +3202,10 @@
                 const min = Math.max(1, Math.round(Number(rotaPlanejadaInfo.duracao_s || 0) / 60));
                 resumoRota = ` • ${km} km • ${min} min até voltar para casa`;
             }
-            showToast(`🚀 Rota criada e otimizada! ${rotaAtual.length} paradas${resumoRota}`);
+            const estimada = rotaPlanejadaInfo && rotaPlanejadaInfo.fonte === 'estimativa offline';
+            showToast(estimada
+                ? 'Rota criada com estimativa em linha reta. Toque em Otimizar quando houver internet.'
+                : `Rota criada: ${rotaAtual.length} paradas${resumoRota}`);
             if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
             }
