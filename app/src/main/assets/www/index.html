@@ -1385,6 +1385,9 @@
         let rotaBrutaOriginal = [];
         let rotaAtual = [];
         let isRotaOtimizada = false;
+        let rotaOrigem = null;
+        let rotaCasa = null;
+        let rotaPlanejadaInfo = null;
         let pacotesBipados = new Set();
         let historicoBipes = [];
 
@@ -1681,6 +1684,25 @@
             return dist;
         }
 
+        function obterSequenciaCompletaRota() {
+            const pontos = [];
+            if (rotaOrigem && rotaOrigem.lat && rotaOrigem.lng) pontos.push(rotaOrigem);
+            pontos.push(...rotaAtual);
+            if (rotaCasa && rotaCasa.lat && rotaCasa.lng) pontos.push(rotaCasa);
+            return pontos;
+        }
+
+        function aplicarMetadadosParadas(paradas) {
+            const total = paradas.length;
+            paradas.forEach((p, idx) => {
+                p.parada_num = idx + 1;
+                if (idx < Math.ceil(total / 3)) p.zona = "Frente (Zona 1)";
+                else if (idx < Math.ceil((2 * total) / 3)) p.zona = "Meio (Zona 2)";
+                else p.zona = "Porta-Malas (Zona 3)";
+            });
+            return paradas;
+        }
+
         // Otimizador Heurístico TSP (Nearest Neighbor + 2-Opt)
         function otimizarPontosTSP(pontos) {
             if (!pontos || pontos.length <= 2) return (pontos || []).map(p => ({ ...p }));
@@ -1750,9 +1772,16 @@
                 return;
             }
 
-            let distAntes = calcularDistanciaTotalRota(rotaAtual);
+            if (rotaOrigem && rotaCasa) {
+                showToast("✅ Esta rota já foi otimizada pelas ruas, saindo da sua posição e terminando em casa.");
+                switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2]);
+                baixarGeometriaRuasReais();
+                return;
+            }
+
+            let distAntes = calcularDistanciaTotalRota(obterSequenciaCompletaRota());
             rotaAtual = otimizarPontosTSP(rotaAtual);
-            let distDepois = calcularDistanciaTotalRota(rotaAtual);
+            let distDepois = calcularDistanciaTotalRota(obterSequenciaCompletaRota());
             let economia = (distAntes - distDepois).toFixed(1);
             let perc = distAntes > 0 ? (((distAntes - distDepois) / distAntes) * 100).toFixed(0) : 0;
 
@@ -1777,6 +1806,11 @@
         function alternarVisaoRota() {
             if (rotaBrutaOriginal.length === 0) {
                 showToast("Carregue uma rota primeiro!");
+                return;
+            }
+
+            if (rotaOrigem && rotaCasa) {
+                showToast("A sequência atual já considera sua localização, as ruas e o retorno para casa.");
                 return;
             }
 
@@ -1820,7 +1854,7 @@
         }
 
         function baixarGeometriaRuasReais() {
-            let pontosComCoords = rotaAtual.filter(p => p.lat && p.lng);
+            let pontosComCoords = obterSequenciaCompletaRota().filter(p => p.lat && p.lng);
             if (pontosComCoords.length < 2) return;
 
             // Se já temos as curvas reais em cache salvo na memória, usa imediatamente!
@@ -1885,7 +1919,7 @@
                 salvarEstadoRotaAtivaNoBanco();
             } else if (!rotaGeometriaRuasCache) {
                 // Fallback offline estruturado em quarteirões (esquinas a 90 graus)
-                let pontosComCoords = rotaAtual.filter(p => p.lat && p.lng);
+                let pontosComCoords = obterSequenciaCompletaRota().filter(p => p.lat && p.lng);
                 let fallback = construirMalhaOrtogonalOffline(pontosComCoords);
                 renderizarTrilhasRuas(fallback, false);
             }
@@ -1919,7 +1953,12 @@
 
             const titleEl = document.getElementById('waze-route-title');
             if (titleEl) {
-                titleEl.innerText = isReal ? `⚡ Rota nas Ruas (${rotaAtual.length} paradas)` : `📡 Traçado Offline (${rotaAtual.length} paradas)`;
+                let titulo = isReal ? `⚡ Rota nas Ruas (${rotaAtual.length} paradas)` : `📡 Traçado Offline (${rotaAtual.length} paradas)`;
+                if (rotaCasa) titulo += ' → 🏠 Casa';
+                if (rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0) {
+                    titulo += ` • ${(Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1)} km`;
+                }
+                titleEl.innerText = titulo;
                 titleEl.style.color = isReal ? '#38bdf8' : '#facc15';
             }
         }
@@ -2450,6 +2489,15 @@
             });
         }
 
+        function criarIconeExtremo(emoji, cor) {
+            return L.divIcon({
+                className: 'route-endpoint-icon',
+                html: `<div style="background:${cor};border:3px solid #fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px #0008;">${emoji}</div>`,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            });
+        }
+
         // Render Map with Route following streets and Popups containing Finalizar Parada
         function renderizarMapa() {
             initMap();
@@ -2460,6 +2508,14 @@
 
             let latlngs = [];
             let total = rotaAtual.length;
+
+            if (rotaOrigem && rotaOrigem.lat && rotaOrigem.lng) {
+                const origemPos = [rotaOrigem.lat, rotaOrigem.lng];
+                latlngs.push(origemPos);
+                markers.push(L.marker(origemPos, { icon: criarIconeExtremo('🚗', '#2563eb'), zIndexOffset: 900 })
+                    .addTo(map)
+                    .bindPopup('<b>🚗 Início</b><br>Sua localização atual'));
+            }
 
             rotaAtual.forEach((p, i) => {
                 if (p.lat && p.lng) {
@@ -2501,6 +2557,14 @@
                 }
             });
 
+            if (rotaCasa && rotaCasa.lat && rotaCasa.lng) {
+                const casaPos = [rotaCasa.lat, rotaCasa.lng];
+                latlngs.push(casaPos);
+                markers.push(L.marker(casaPos, { icon: criarIconeExtremo('🏠', '#16a34a'), zIndexOffset: 900 })
+                    .addTo(map)
+                    .bindPopup(`<b>🏠 Destino final</b><br>${rotaCasa.endereco || 'Casa'}`));
+            }
+
             // Se já tem traçado real das ruas em cache, desenha imediatamente!
             if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
                 renderizarTrilhasRuas(rotaGeometriaRuasCache);
@@ -2538,7 +2602,10 @@
                 total_paradas: total,
                 total_pacotes: rotaAtual.reduce((acc, p) => acc + (p.pacotes ? p.pacotes.length : 1), 0),
                 paradas_finalizadas: concluidas,
-                distancia_km: parseFloat(calcularDistanciaTotalRota(rotaAtual).toFixed(1)),
+                distancia_km: parseFloat(calcularDistanciaTotalRota(obterSequenciaCompletaRota()).toFixed(1)),
+                origem: rotaOrigem,
+                casa: rotaCasa,
+                planejamento: rotaPlanejadaInfo,
                 geometria_ruas: rotaGeometriaRuasCache || [],
                 paradas: rotaAtual
             };
@@ -2759,6 +2826,9 @@
             };
 
             let paradas = rotaObj.paradas || [];
+            rotaOrigem = rotaObj.origem && rotaObj.origem.lat ? { ...rotaObj.origem } : null;
+            rotaCasa = rotaObj.casa && rotaObj.casa.lat ? { ...rotaObj.casa } : null;
+            rotaPlanejadaInfo = rotaObj.planejamento && typeof rotaObj.planejamento === 'object' ? { ...rotaObj.planejamento } : null;
             rotaBrutaOriginal = paradas.map(p => ({ ...p }));
             rotaAtual = paradas.map(p => ({ ...p }));
             isRotaOtimizada = true;
@@ -2814,6 +2884,9 @@
                     rotaAtivaId = null;
                     rotaAtual = [];
                     rotaBrutaOriginal = [];
+                    rotaOrigem = null;
+                    rotaCasa = null;
+                    rotaPlanejadaInfo = null;
                     rotaGeometriaRuasCache = null;
                     document.getElementById('banner-rota-ativa').style.display = 'none';
                     renderizarParadas();
@@ -2831,14 +2904,19 @@
         // -------------------------------------------------------------
         // CARREGAMENTO E CRIAÇÃO AUTOMÁTICA DE ROTAS
         // -------------------------------------------------------------
-        window.carregarRota = function(paradas, rotaIdOpcional, tituloOpcional) {
+        window.carregarRota = function(paradas, rotaIdOpcional, tituloOpcional, origemOpcional, casaOpcional, routeInfoOpcional) {
             if (typeof paradas === 'string') {
                 try { paradas = JSON.parse(paradas); } catch (e) { return; }
             }
             if (!Array.isArray(paradas) || paradas.length === 0) return;
 
+            rotaOrigem = origemOpcional && origemOpcional.lat ? { ...origemOpcional } : null;
+            rotaCasa = casaOpcional && casaOpcional.lat ? { ...casaOpcional } : null;
+            rotaPlanejadaInfo = routeInfoOpcional && typeof routeInfoOpcional === 'object' ? { ...routeInfoOpcional } : null;
             rotaBrutaOriginal = paradas.map(p => ({ ...p }));
-            rotaAtual = otimizarPontosTSP(rotaBrutaOriginal);
+            rotaAtual = (rotaOrigem && rotaCasa)
+                ? aplicarMetadadosParadas(rotaBrutaOriginal.map(p => ({ ...p })))
+                : otimizarPontosTSP(rotaBrutaOriginal);
             isRotaOtimizada = true;
             rotaGeometriaRuasCache = null; // Calcula ruas no OSRM
 
@@ -2875,7 +2953,13 @@
             switchTab('tab-paradas', document.querySelectorAll('.tab-btn')[1]);
 
             let totalPacotes = rotaAtivaMeta.total_pacotes;
-            showToast(`🚀 Rota criada e salva no banco e offline! (${rotaAtual.length} paradas)`);
+            let resumoRota = '';
+            if (rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0) {
+                const km = (Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1);
+                const min = Math.max(1, Math.round(Number(rotaPlanejadaInfo.duracao_s || 0) / 60));
+                resumoRota = ` • ${km} km • ${min} min até voltar para casa`;
+            }
+            showToast(`🚀 Rota criada e otimizada! ${rotaAtual.length} paradas${resumoRota}`);
             if (!isAudioMuted && window.Android && window.Android.speak) {
                 window.Android.speak(`Rota pronta com ${rotaAtual.length} paradas e ${totalPacotes} pacotes organizados no veículo.`);
             }

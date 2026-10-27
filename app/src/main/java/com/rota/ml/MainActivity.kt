@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
+    private var ultimaLocalizacao: Location? = null
 
     override fun onResume() {
         super.onResume()
@@ -156,6 +157,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (locationListener == null) {
                 locationListener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
+                        ultimaLocalizacao = location
                         val lat = location.latitude
                         val lng = location.longitude
                         val bearing = if (location.hasBearing()) location.bearing else 0.0f
@@ -191,6 +193,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val lastLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
                 lastLoc?.let { loc ->
+                    ultimaLocalizacao = loc
                     binding.webView.post {
                         binding.webView.evaluateJavascript(
                             "if (window.atualizarPosicaoCarro) window.atualizarPosicaoCarro(${loc.latitude}, ${loc.longitude}, ${loc.bearing}, ${loc.speed * 3.6f}, ${loc.accuracy});",
@@ -1051,6 +1054,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         container.addView(radioGroupNav)
 
+        container.addView(createSectionTitle("🏠 Retorno para casa"))
+        val editEnderecoCasa = createField(
+            "Endereço de casa (destino final da rota)",
+            "Endereço de casa",
+            "Rua, número, bairro, cidade - UF"
+        )
+
         container.addView(createSectionTitle("🤖 Google Gemini IA (Chaves Opcionais)"))
         val editGemini1 = createField("Gemini API Key 1", "Gemini Key 1", "AIzaSy...")
         val editGemini2 = createField("Gemini API Key 2 (Backup)", "Gemini Key 2", "AIzaSy...")
@@ -1070,6 +1080,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     putString("Firebase Key", editFbKey.text.toString().trim())
                     putString("Firebase Sala", editFbSala.text.toString().trim())
                     putString("Navegador Padrao", chosenNav)
+                    putString("Endereço de casa", editEnderecoCasa.text.toString().trim())
                     putString("Gemini Key 1", editGemini1.text.toString().trim())
                     putString("Gemini Key 2", editGemini2.text.toString().trim())
                     apply()
@@ -1100,6 +1111,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     }
                     .setNegativeButton("Fechar", null)
                     .show()
+                return@launch
+            }
+
+            val enderecoCasa = prefs.getString("Endereço de casa", "")?.trim().orEmpty()
+            if (enderecoCasa.isBlank()) {
+                MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle("🏠 Configure seu endereço de casa")
+                    .setMessage("O endereço de casa será usado como destino final para calcular a volta mais econômica.")
+                    .setPositiveButton("Abrir configurações") { _, _ -> showConfigDialog() }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+                return@launch
+            }
+
+            if (obterLocalizacaoAtual() == null) {
+                Toast.makeText(this@MainActivity, "Aguardando sua localização atual. Ative o GPS e tente novamente.", Toast.LENGTH_LONG).show()
+                iniciarRastreamentoGPS()
                 return@launch
             }
 
@@ -1143,6 +1171,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             geocoderAndRoute(paradasJsonArray)
             binding.progressBar.visibility = View.GONE
         }
+    }
+
+    private fun obterLocalizacaoAtual(): Location? {
+        val candidata = ultimaLocalizacao ?: try {
+            locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        } catch (_: SecurityException) {
+            null
+        }
+        return candidata?.takeIf { System.currentTimeMillis() - it.time <= 5 * 60 * 1000L }
     }
 
     private suspend fun callGeminiWithFailover(text: String): String? {
@@ -1206,95 +1244,145 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @Suppress("DEPRECATION")
     private suspend fun geocoderAndRoute(paradas: JSONArray) {
         val geocoder = Geocoder(this, Locale.getDefault())
-        val points = mutableListOf<JSONObject>()
-
+        val origemAtual = obterLocalizacaoAtual()
+        val enderecoCasa = prefs.getString("Endereço de casa", "")?.trim().orEmpty()
+        if (origemAtual == null || enderecoCasa.isBlank()) return
+        suspend fun geocodificar(query: String): android.location.Address? {
+            val resultados = withContext(Dispatchers.IO) { geocoder.getFromLocationName(query, 1) }
+            return resultados?.firstOrNull()
+        }
+        val entregas = mutableListOf<JSONObject>()
+        val enderecosNaoLocalizados = mutableListOf<String>()
         for (i in 0 until paradas.length()) {
             val p = paradas.getJSONObject(i)
             val endereco = p.optString("endereco", "")
             val bairro = p.optString("bairro", "")
             val cep = p.optString("cep", "")
-
-            val queryPrincipal = if (cep.isNotBlank()) {
-                "$endereco, $cep, Campinas - SP, Brasil"
-            } else if (bairro.isNotBlank()) {
-                "$endereco, $bairro, Campinas - SP, Brasil"
-            } else {
-                "$endereco, Campinas - SP, Brasil"
+            val cidade = p.optString("cidade", "Campinas")
+            val query = when {
+                cep.isNotBlank() -> "$endereco, $cep, $cidade, SP, Brasil"
+                bairro.isNotBlank() -> "$endereco, $bairro, $cidade, SP, Brasil"
+                else -> "$endereco, $cidade, SP, Brasil"
             }
-
             try {
-                var results = withContext(Dispatchers.IO) { geocoder.getFromLocationName(queryPrincipal, 1) }
-                if (results.isNullOrEmpty() && cep.isNotBlank()) {
-                    results = withContext(Dispatchers.IO) { geocoder.getFromLocationName("$endereco, Campinas - SP", 1) }
+                val location = geocodificar(query)
+                if (location == null) enderecosNaoLocalizados.add(endereco)
+                else {
+                    p.put("lat", location.latitude)
+                    p.put("lng", location.longitude)
+                    p.put("_tipo_rota", "entrega")
+                    entregas.add(p)
                 }
-
-                if (!results.isNullOrEmpty()) {
-                    p.put("lat", results[0].latitude)
-                    p.put("lng", results[0].longitude)
-                } else {
-                    // Fallback geográfico realista na região de Campinas (Taquaral/Guanabara)
-                    p.put("lat", -22.8850 + (i * 0.003))
-                    p.put("lng", -47.0580 + (i * 0.003))
-                }
-                points.add(p)
             } catch (e: Exception) {
-                Log.e("Geocode", "Fail addr: $queryPrincipal", e)
-                p.put("lat", -22.8850 + (i * 0.003))
-                p.put("lng", -47.0580 + (i * 0.003))
-                points.add(p)
+                Log.e("Geocode", "Falha localizando: $query", e)
+                enderecosNaoLocalizados.add(endereco)
             }
         }
-
-        if (points.isEmpty()) return
-
-        // OSRM Trip API para ordenar a rota no menor trajeto
-        val coords = points.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
-        val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson"
-
+        val casaLocation = try { geocodificar("$enderecoCasa, Brasil") } catch (e: Exception) {
+            Log.e("Geocode", "Falha localizando casa", e)
+            null
+        }
+        if (enderecosNaoLocalizados.isNotEmpty() || casaLocation == null || entregas.isEmpty()) {
+            withContext(Dispatchers.Main) {
+                val detalhe = if (enderecosNaoLocalizados.isNotEmpty()) {
+                    "\n\nNão localizado: ${enderecosNaoLocalizados.take(2).joinToString("; ")}"
+                } else ""
+                Toast.makeText(this@MainActivity, "Não foi possível localizar todos os endereços. Revise os dados e tente novamente.$detalhe", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        val origem = JSONObject().apply {
+            put("_tipo_rota", "origem")
+            put("endereco", "Sua localização atual")
+            put("lat", origemAtual.latitude)
+            put("lng", origemAtual.longitude)
+        }
+        val casa = JSONObject().apply {
+            put("_tipo_rota", "casa")
+            put("endereco", enderecoCasa)
+            put("lat", casaLocation.latitude)
+            put("lng", casaLocation.longitude)
+        }
+        val pontosRoteamento = mutableListOf<JSONObject>().apply {
+            add(origem)
+            addAll(entregas)
+            add(casa)
+        }
+        val coords = pontosRoteamento.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
+        val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson&overview=full"
+        var ordenados = ordenarEntregasPorDistancia(entregas, origem, casa)
+        var routeInfo = JSONObject().put("fonte", "estimativa offline").put("distancia_m", 0).put("duracao_s", 0)
         try {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                .build()
-            val request = Request.Builder()
-                .url(osrmUrl)
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile; RotaML/2.0)")
-                .build()
+            val client = OkHttpClient.Builder().connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS).readTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
+            val request = Request.Builder().url(osrmUrl).header("User-Agent", "RotaML/3.0 Android").build()
             val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
-            if (response.isSuccessful) {
-                val tripJson = JSONObject(response.body?.string() ?: "{}")
-                val waypoints = tripJson.optJSONArray("waypoints")
-                val sortedPoints = JSONArray()
-
-                if (waypoints != null && waypoints.length() > 0) {
-                    val indices = (0 until waypoints.length()).map { i ->
-                        waypoints.getJSONObject(i).getInt("waypoint_index") to i
-                    }.sortedBy { it.first }
-
-                    for (pair in indices) {
-                        sortedPoints.put(points[pair.second])
+            response.use { resp ->
+                if (resp.isSuccessful) {
+                    val tripJson = JSONObject(resp.body?.string() ?: "{}")
+                    val waypoints = tripJson.optJSONArray("waypoints")
+                    if (waypoints != null && waypoints.length() == pontosRoteamento.size) {
+                        val orderedAll = (0 until waypoints.length())
+                            .map { i -> waypoints.getJSONObject(i).getInt("waypoint_index") to i }
+                            .sortedBy { it.first }
+                            .map { pontosRoteamento[it.second] }
+                        ordenados = orderedAll.filter { it.optString("_tipo_rota") == "entrega" }.toMutableList()
+                        routeInfo = JSONObject().put("fonte", "ruas OSRM").put("distancia_m", tripJson.optDouble("distance", 0.0)).put("duracao_s", tripJson.optDouble("duration", 0.0))
                     }
-                } else {
-                    for (p in points) sortedPoints.put(p)
                 }
-
-                binding.webView.post {
-                    binding.webView.evaluateJavascript("carregarRota(${sortedPoints})", null)
-                }
-                return
             }
         } catch (e: Exception) {
-            Log.e("OSRM", "Error", e)
+            Log.e("OSRM", "Roteamento online indisponível; usando sequência offline", e)
         }
-
-        // Se o OSRM der erro de rede, o JavaScript da webview aplica o algoritmo 2-Opt local
-        val fallbackPoints = JSONArray()
-        for (p in points) fallbackPoints.put(p)
+        val orderedJson = JSONArray()
+        ordenados.forEach { orderedJson.put(it) }
         binding.webView.post {
-            binding.webView.evaluateJavascript("carregarRota(${fallbackPoints})", null)
+            binding.webView.evaluateJavascript("carregarRota($orderedJson, null, null, ${origem}, ${casa}, $routeInfo)", null)
         }
     }
+    private fun ordenarEntregasPorDistancia(entregas: List<JSONObject>, origem: JSONObject, casa: JSONObject): MutableList<JSONObject> {
+        val restantes = entregas.toMutableList()
+        val resultado = mutableListOf<JSONObject>()
+        var atualLat = origem.getDouble("lat")
+        var atualLng = origem.getDouble("lng")
+        while (restantes.isNotEmpty()) {
+            val proximo = restantes.minByOrNull { distanciaEmLinhaKm(atualLat, atualLng, it.getDouble("lat"), it.getDouble("lng")) } ?: break
+            restantes.remove(proximo)
+            resultado.add(proximo)
+            atualLat = proximo.getDouble("lat")
+            atualLng = proximo.getDouble("lng")
+        }
+        var melhorou = true
+        var iteracao = 0
+        while (melhorou && iteracao++ < 80) {
+            melhorou = false
+            for (i in 0 until (resultado.size - 1)) {
+                for (k in i + 1 until resultado.size) {
+                    val anterior = if (i == 0) origem else resultado[i - 1]
+                    val atual = resultado[i]
+                    val finalTrecho = resultado[k]
+                    val proximo = if (k + 1 < resultado.size) resultado[k + 1] else casa
+                    val distanciaAtual = distanciaEntrePontos(anterior, atual) + distanciaEntrePontos(finalTrecho, proximo)
+                    val distanciaInvertida = distanciaEntrePontos(anterior, finalTrecho) + distanciaEntrePontos(atual, proximo)
+                    if (distanciaInvertida < distanciaAtual - 0.001) {
+                        val invertido = resultado.subList(i, k + 1).reversed()
+                        for (offset in invertido.indices) resultado[i + offset] = invertido[offset]
+                        melhorou = true
+                    }
+                }
+            }
+        }
+        return resultado
+    }
 
+    private fun distanciaEntrePontos(a: JSONObject, b: JSONObject): Double {
+        return distanciaEmLinhaKm(a.getDouble("lat"), a.getDouble("lng"), b.getDouble("lat"), b.getDouble("lng"))
+    }
+    private fun distanciaEmLinhaKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLng = Math.toRadians(lng2 - lng1)
+        val a = kotlin.math.sin(dLat / 2) * kotlin.math.sin(dLat / 2) + kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) * kotlin.math.sin(dLng / 2) * kotlin.math.sin(dLng / 2)
+        return 6371.0 * 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+    }
     fun buscarGeometriaRuasOSRM(coordsList: String, callback: ((Boolean, String?) -> Unit)? = null) {
         if (coordsList.isBlank()) {
             callback?.invoke(false, null)
