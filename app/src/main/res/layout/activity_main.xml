@@ -20,10 +20,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="12dp"
+            android:paddingStart="16dp"
             android:paddingEnd="12dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp">
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
 
             <!-- Top Brand Row -->
             <LinearLayout
@@ -36,7 +36,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="RotaML"
-                    android:textColor="@color/primary"
+                    android:textColor="@color/text_main"
                     android:textStyle="bold"
                     android:textSize="20sp" />
 
@@ -44,12 +44,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
-                    android:background="#26FFE600"
+                    android:background="#263AE3C4"
                     android:paddingStart="6dp"
                     android:paddingEnd="6dp"
                     android:paddingTop="2dp"
                     android:paddingBottom="2dp"
-                    android:text="EXTRA"
+                    android:text="DRIVER"
                     android:textColor="@color/primary"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -76,9 +76,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMuteAudio"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="44dp"
+                    android:visibility="gone"
                     android:padding="0dp"
+                    android:contentDescription="Ativar ou silenciar áudio"
                     android:text="🔊"
                     android:textSize="16sp"
                     android:textColor="@color/text_main" />
@@ -87,9 +89,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLerFoto"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="44dp"
+                    android:visibility="gone"
                     android:padding="0dp"
+                    android:contentDescription="Ler foto da galeria"
                     android:text="🖼️"
                     android:textSize="16sp"
                     android:textColor="@color/text_main" />
@@ -98,9 +102,10 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnConfig"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="44dp"
                     android:padding="0dp"
+                    android:contentDescription="Abrir configurações"
                     android:text="⚙️"
                     android:textSize="16sp"
                     android:textColor="@color/text_main" />
@@ -112,13 +117,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="8dp"
+                android:visibility="gone"
                 android:gravity="center_vertical">
 
                 <!-- 1. Ler Tela Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLer"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:text="1. Ler Tela"
@@ -128,13 +134,16 @@
                     app:backgroundTint="@color/surface_card"
                     app:strokeColor="@color/border_dark"
                     app:strokeWidth="1dp"
-                    app:cornerRadius="8dp" />
+                    app:cornerRadius="12dp"
+                    android:singleLine="true"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
 
                 <!-- 2. Gerar Rota Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRota"
                     android:layout_width="0dp"
-                    android:layout_height="42dp"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:text="2. Gerar Rota"
@@ -142,19 +151,22 @@
                     android:textStyle="bold"
                     android:textColor="@color/black"
                     app:backgroundTint="@color/primary"
-                    app:cornerRadius="8dp" />
+                    app:cornerRadius="12dp"
+                    android:singleLine="true"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
 
                 <!-- Quick Scanner Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnBiparTop"
                     android:layout_width="wrap_content"
-                    android:layout_height="42dp"
+                    android:layout_height="48dp"
                     android:text="📸 Bipar"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/white"
                     app:backgroundTint="@color/secondary"
-                    app:cornerRadius="8dp" />
+                    app:cornerRadius="12dp" />
             </LinearLayout>
 
         </LinearLayout>

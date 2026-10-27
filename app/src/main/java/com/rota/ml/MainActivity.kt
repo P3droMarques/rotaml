@@ -16,6 +16,7 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.CancellationSignal
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.MediaStore
@@ -43,6 +44,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.coroutines.resume
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
@@ -84,13 +86,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(binding.root)
 
         prefs = getSharedPreferences("RotaMLPrefs", Context.MODE_PRIVATE)
-        if (!prefs.contains("Firebase URL") || prefs.getString("Firebase URL", "")?.isBlank() == true) {
-            prefs.edit()
-                .putString("Firebase URL", DEFAULT_FIREBASE_URL)
-                .putString("Firebase Key", DEFAULT_FIREBASE_KEY)
-                .putString("Firebase Sala", DEFAULT_FIREBASE_SALA)
-                .apply()
-        }
         isAudioMuted = prefs.getBoolean("is_audio_muted", false)
         tts = TextToSpeech(this, this)
 
@@ -227,7 +222,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     callback?.invoke(origin, true, false)
                 }
             }
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    atualizarResumoLeitura(LeitorEnviosService.paradasDetectadas.size)
+                }
+            }
             addJavascriptInterface(WebAppInterface(), "Android")
             loadUrl("file:///android_asset/www/index.html")
         }
@@ -296,6 +296,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     binding.btnLer.text = if (totalParadas > 0) "1. Ler Tela ($totalParadas)" else "1. Ler Tela"
                     binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
                 }
+                atualizarResumoLeitura(totalParadas)
             }
         }
     }
@@ -319,6 +320,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         } else {
             binding.btnLer.text = if (totalParadas > 0) "1. Ler Tela ($totalParadas)" else "1. Ler Tela"
             binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
+        }
+        atualizarResumoLeitura(totalParadas)
+    }
+
+    private fun atualizarResumoLeitura(total: Int) {
+        val capturando = LeitorEnviosService.capturando
+        binding.webView.post {
+            binding.webView.evaluateJavascript("if (window.atualizarResumoLeitura) window.atualizarResumoLeitura($total, $capturando);", null)
         }
     }
 
@@ -559,28 +568,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun getFirebaseBaseUrl(): String {
-        var url = prefs.getString("Firebase URL", DEFAULT_FIREBASE_URL)?.trim() ?: DEFAULT_FIREBASE_URL
-        if (url.isBlank()) url = DEFAULT_FIREBASE_URL
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            url = "https://$url"
-        }
-        if (url.endsWith("/")) {
-            url = url.substring(0, url.length - 1)
-        }
-        if (!url.contains("firebaseio.com") && !url.contains("googleapis.com")) {
-            url = "$url-default-rtdb.firebaseio.com"
-        }
-        return url
+        return DEFAULT_FIREBASE_URL
     }
 
     private fun getFirebaseAuthToken(): String {
-        val key = prefs.getString("Firebase Key", DEFAULT_FIREBASE_KEY)?.trim() ?: DEFAULT_FIREBASE_KEY
-        return if (key.isNotBlank()) key else DEFAULT_FIREBASE_KEY
+        return DEFAULT_FIREBASE_KEY
     }
 
     private fun getFirebaseSala(): String {
-        val sala = prefs.getString("Firebase Sala", DEFAULT_FIREBASE_SALA)?.trim() ?: DEFAULT_FIREBASE_SALA
-        return if (sala.isNotBlank()) sala else DEFAULT_FIREBASE_SALA
+        return DEFAULT_FIREBASE_SALA
     }
 
     fun syncFirebaseBipe(code: String, paradaNum: Int = 0) {
@@ -996,32 +992,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return et
         }
 
-        container.addView(createSectionTitle("🔥 Google Firebase Database"))
-        val editFbUrl = createField("URL do Firebase Realtime Database", "Firebase URL", DEFAULT_FIREBASE_URL, defaultVal = DEFAULT_FIREBASE_URL)
-        val editFbKey = createField("Chave Secreta / Auth Token do Firebase", "Firebase Key", DEFAULT_FIREBASE_KEY, defaultVal = DEFAULT_FIREBASE_KEY, isPassword = true)
-        val editFbSala = createField("Identificador da Sala / Motorista", "Firebase Sala", DEFAULT_FIREBASE_SALA, defaultVal = DEFAULT_FIREBASE_SALA)
-
-        val btnTestFb = com.google.android.material.button.MaterialButton(this).apply {
-            text = "🧪 Testar Conexão com Firebase"
-            textSize = 12f
-            setPadding(0, 12, 0, 12)
-            setBackgroundColor(Color.parseColor("#374151"))
-            setTextColor(Color.parseColor("#60A5FA"))
-            setOnClickListener {
-                val url = editFbUrl.text.toString().trim()
-                val key = editFbKey.text.toString().trim()
-                val sala = editFbSala.text.toString().trim()
-                Toast.makeText(this@MainActivity, "Testando conexão Firebase...", Toast.LENGTH_SHORT).show()
-                testarConexaoFirebase(url, key, sala) { _, msg ->
-                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-        val paramsBtn = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            setMargins(0, 12, 0, 16)
-        }
-        container.addView(btnTestFb, paramsBtn)
-
         container.addView(createSectionTitle("🧭 Navegador Padrão"))
         val tvNav = TextView(this).apply {
             text = "Escolha qual aplicativo abrir ao navegar:"
@@ -1066,7 +1036,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val editGemini2 = createField("Gemini API Key 2 (Backup)", "Gemini Key 2", "AIzaSy...")
 
         MaterialAlertDialogBuilder(this)
-            .setTitle("⚙️ Configurações & Firebase")
+            .setTitle("Configurações")
             .setView(scrollView)
             .setPositiveButton("Salvar Tudo") { _, _ ->
                 val chosenNav = when (radioGroupNav.checkedRadioButtonId) {
@@ -1076,9 +1046,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 }
 
                 prefs.edit().apply {
-                    putString("Firebase URL", editFbUrl.text.toString().trim())
-                    putString("Firebase Key", editFbKey.text.toString().trim())
-                    putString("Firebase Sala", editFbSala.text.toString().trim())
                     putString("Navegador Padrao", chosenNav)
                     putString("Endereço de casa", editEnderecoCasa.text.toString().trim())
                     putString("Gemini Key 1", editGemini1.text.toString().trim())
@@ -1125,14 +1092,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 return@launch
             }
 
-            if (obterLocalizacaoAtual() == null) {
-                Toast.makeText(this@MainActivity, "Aguardando sua localização atual. Ative o GPS e tente novamente.", Toast.LENGTH_LONG).show()
-                iniciarRastreamentoGPS()
-                return@launch
-            }
-
             binding.progressBar.visibility = View.VISIBLE
-            Toast.makeText(this@MainActivity, "Processando paradas e calculando rota...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@MainActivity, "Obtendo GPS atual e calculando a melhor rota pelas ruas...", Toast.LENGTH_SHORT).show()
 
             var paradasJsonArray = JSONArray()
 
@@ -1181,6 +1142,54 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             null
         }
         return candidata?.takeIf { System.currentTimeMillis() - it.time <= 5 * 60 * 1000L }
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun obterLocalizacaoAtualParaRota(): Location? {
+        iniciarRastreamentoGPS()
+        val lm = locationManager ?: return null
+        val provedores = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .filter { provider ->
+                try { lm.isProviderEnabled(provider) } catch (_: Exception) { false }
+            }
+
+        val atuais = mutableListOf<Location>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            for (provider in provedores) {
+                val location = withTimeoutOrNull(6500L) {
+                    suspendCancellableCoroutine<Location?> { continuation ->
+                        val cancelamento = CancellationSignal()
+                        continuation.invokeOnCancellation { cancelamento.cancel() }
+                        try {
+                            lm.getCurrentLocation(provider, cancelamento, mainExecutor) { atual ->
+                                if (continuation.isActive) continuation.resume(atual)
+                            }
+                        } catch (e: Exception) {
+                            if (continuation.isActive) continuation.resume(null)
+                        }
+                    }
+                }
+                location?.let { atuais.add(it) }
+            }
+        }
+
+        val melhor = (atuais + listOfNotNull(
+            try { lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) } catch (_: Exception) { null },
+            try { lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) } catch (_: Exception) { null },
+            ultimaLocalizacao
+        )).filter { location ->
+            val idade = System.currentTimeMillis() - location.time
+            val precisao = if (location.hasAccuracy()) location.accuracy else Float.MAX_VALUE
+            idade in 0..120_000L && (precisao <= 200f || !location.hasAccuracy())
+        }.minWithOrNull(compareBy<Location> {
+            if (it.hasAccuracy()) it.accuracy else 200f
+        }.thenByDescending { it.time })
+
+        melhor?.let {
+            ultimaLocalizacao = it
+            Log.d("GPS", "Posição atual para rota: ${it.latitude}, ${it.longitude}, precisão=${it.accuracy}m")
+        }
+        return melhor
     }
 
     private suspend fun callGeminiWithFailover(text: String): String? {
@@ -1244,9 +1253,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @Suppress("DEPRECATION")
     private suspend fun geocoderAndRoute(paradas: JSONArray) {
         val geocoder = Geocoder(this, Locale.getDefault())
-        val origemAtual = obterLocalizacaoAtual()
+        val origemAtual = obterLocalizacaoAtualParaRota()
         val enderecoCasa = prefs.getString("Endereço de casa", "")?.trim().orEmpty()
-        if (origemAtual == null || enderecoCasa.isBlank()) return
+        if (origemAtual == null) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, "Não consegui obter uma localização GPS recente. Ative a localização e tente novamente.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        if (enderecoCasa.isBlank()) return
         suspend fun geocodificar(query: String): android.location.Address? {
             val resultados = withContext(Dispatchers.IO) { geocoder.getFromLocationName(query, 1) }
             return resultados?.firstOrNull()
@@ -1296,6 +1311,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             put("endereco", "Sua localização atual")
             put("lat", origemAtual.latitude)
             put("lng", origemAtual.longitude)
+            put("precisao_m", if (origemAtual.hasAccuracy()) origemAtual.accuracy else JSONObject.NULL)
+            put("capturada_em", origemAtual.time)
         }
         val casa = JSONObject().apply {
             put("_tipo_rota", "casa")
@@ -1308,25 +1325,41 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             addAll(entregas)
             add(casa)
         }
-        val coords = pontosRoteamento.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
-        val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson&overview=full"
         var ordenados = ordenarEntregasPorDistancia(entregas, origem, casa)
         var routeInfo = JSONObject().put("fonte", "estimativa offline").put("distancia_m", 0).put("duracao_s", 0)
+
+        // A ordem é calculada pela distância de carro entre todos os pontos,
+        // mantendo a localização atual como origem e a casa como destino final.
+        val planoPorRuas = otimizarPorDistanciaRodoviaria(pontosRoteamento, entregas)
+        if (planoPorRuas != null) {
+            ordenados = planoPorRuas.entregasOrdenadas
+            routeInfo = JSONObject()
+                .put("fonte", "OSRM matriz de ruas")
+                .put("distancia_m", planoPorRuas.distanciaMetros)
+                .put("duracao_s", planoPorRuas.duracaoSegundos)
+        }
+
+        // Mantém um segundo fallback de ordenação viária caso o servidor de
+        // matriz esteja temporariamente indisponível.
+        val coords = pontosRoteamento.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
+        val osrmUrl = "https://router.project-osrm.org/trip/v1/driving/$coords?source=first&destination=last&roundtrip=false&geometries=geojson&overview=full"
         try {
-            val client = OkHttpClient.Builder().connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS).readTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
-            val request = Request.Builder().url(osrmUrl).header("User-Agent", "RotaML/3.0 Android").build()
-            val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
-            response.use { resp ->
-                if (resp.isSuccessful) {
-                    val tripJson = JSONObject(resp.body?.string() ?: "{}")
-                    val waypoints = tripJson.optJSONArray("waypoints")
-                    if (waypoints != null && waypoints.length() == pontosRoteamento.size) {
-                        val orderedAll = (0 until waypoints.length())
-                            .map { i -> waypoints.getJSONObject(i).getInt("waypoint_index") to i }
-                            .sortedBy { it.first }
-                            .map { pontosRoteamento[it.second] }
-                        ordenados = orderedAll.filter { it.optString("_tipo_rota") == "entrega" }.toMutableList()
-                        routeInfo = JSONObject().put("fonte", "ruas OSRM").put("distancia_m", tripJson.optDouble("distance", 0.0)).put("duracao_s", tripJson.optDouble("duration", 0.0))
+            if (planoPorRuas == null) {
+                val client = OkHttpClient.Builder().connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS).readTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
+                val request = Request.Builder().url(osrmUrl).header("User-Agent", "RotaML/3.0 Android").build()
+                val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+                response.use { resp ->
+                    if (resp.isSuccessful) {
+                        val tripJson = JSONObject(resp.body?.string() ?: "{}")
+                        val waypoints = tripJson.optJSONArray("waypoints")
+                        if (waypoints != null && waypoints.length() == pontosRoteamento.size) {
+                            val orderedAll = (0 until waypoints.length())
+                                .map { i -> waypoints.getJSONObject(i).getInt("waypoint_index") to i }
+                                .sortedBy { it.first }
+                                .map { pontosRoteamento[it.second] }
+                            ordenados = orderedAll.filter { it.optString("_tipo_rota") == "entrega" }.toMutableList()
+                            routeInfo = JSONObject().put("fonte", "ruas OSRM").put("distancia_m", tripJson.optDouble("distance", 0.0)).put("duracao_s", tripJson.optDouble("duration", 0.0))
+                        }
                     }
                 }
             }
@@ -1338,6 +1371,128 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding.webView.post {
             binding.webView.evaluateJavascript("carregarRota($orderedJson, null, null, ${origem}, ${casa}, $routeInfo)", null)
         }
+    }
+
+    private data class PlanoRota(
+        val entregasOrdenadas: MutableList<JSONObject>,
+        val distanciaMetros: Double,
+        val duracaoSegundos: Double
+    )
+
+    private suspend fun otimizarPorDistanciaRodoviaria(
+        pontos: List<JSONObject>,
+        entregas: List<JSONObject>
+    ): PlanoRota? {
+        if (pontos.size != entregas.size + 2 || entregas.isEmpty()) return null
+
+        val coords = pontos.joinToString(";") { "${it.getDouble("lng")},${it.getDouble("lat")}" }
+        val urls = listOf(
+            "https://router.project-osrm.org/table/v1/driving/$coords?annotations=distance,duration",
+            "https://routing.openstreetmap.de/routed-car/table/v1/driving/$coords?annotations=distance,duration"
+        )
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        var tableJson: JSONObject? = null
+        for (url in urls) {
+            try {
+                val request = Request.Builder().url(url).header("User-Agent", "RotaML/3.0 Android").build()
+                val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+                response.use { resp ->
+                    if (resp.isSuccessful) {
+                        val json = JSONObject(resp.body?.string() ?: "{}")
+                        if (json.optJSONArray("distances") != null && json.optJSONArray("durations") != null) {
+                            tableJson = json
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("OSRM", "Matriz indisponível em $url: ${e.message}")
+            }
+        }
+
+        val json = tableJson ?: return null
+        val distancesJson = json.optJSONArray("distances") ?: return null
+        val durationsJson = json.optJSONArray("durations") ?: return null
+        val totalPontos = pontos.size
+        if (distancesJson.length() != totalPontos || durationsJson.length() != totalPontos) return null
+
+        val distances = Array(totalPontos) { DoubleArray(totalPontos) { Double.POSITIVE_INFINITY } }
+        val durations = Array(totalPontos) { DoubleArray(totalPontos) { Double.POSITIVE_INFINITY } }
+        for (i in 0 until totalPontos) {
+            val distanceRow = distancesJson.optJSONArray(i) ?: return null
+            val durationRow = durationsJson.optJSONArray(i) ?: return null
+            if (distanceRow.length() != totalPontos || durationRow.length() != totalPontos) return null
+            for (j in 0 until totalPontos) {
+                distances[i][j] = distanceRow.optDouble(j, Double.POSITIVE_INFINITY)
+                durations[i][j] = durationRow.optDouble(j, Double.POSITIVE_INFINITY)
+            }
+        }
+
+        fun custoDaRota(rota: List<Int>, matriz: Array<DoubleArray>): Double {
+            var total = 0.0
+            for (i in 0 until rota.size - 1) {
+                val trecho = matriz[rota[i]][rota[i + 1]]
+                if (!trecho.isFinite()) return Double.POSITIVE_INFINITY
+                total += trecho
+            }
+            return total
+        }
+
+        fun melhorarDoisOpt(rotaInicial: MutableList<Int>): MutableList<Int> {
+            val rota = rotaInicial.toMutableList()
+            var melhorou = true
+            var iteracoes = 0
+            while (melhorou && iteracoes++ < 100) {
+                melhorou = false
+                for (i in 1 until (rota.size - 2)) {
+                    for (k in (i + 1) until (rota.size - 1)) {
+                        val atual = distances[rota[i - 1]][rota[i]] + distances[rota[k]][rota[k + 1]]
+                        val invertido = distances[rota[i - 1]][rota[k]] + distances[rota[i]][rota[k + 1]]
+                        if (invertido.isFinite() && invertido < atual - 0.5) {
+                            rota.subList(i, k + 1).reverse()
+                            melhorou = true
+                        }
+                    }
+                }
+            }
+            return rota
+        }
+
+        var melhorRota: MutableList<Int>? = null
+        var melhorDistancia = Double.POSITIVE_INFINITY
+        val indicesEntregas = (1..entregas.size).toList()
+
+        // Testa cada parada como possível primeira entrega. Isso evita que a
+        // escolha gulosa inicial prenda a rota em uma sequência ruim.
+        for (primeira in indicesEntregas) {
+            val rota = mutableListOf(0, primeira)
+            val restantes = indicesEntregas.filter { it != primeira }.toMutableList()
+            while (restantes.isNotEmpty()) {
+                val atual = rota.last()
+                val proxima = restantes.minByOrNull { distances[atual][it] } ?: break
+                rota.add(proxima)
+                restantes.remove(proxima)
+            }
+            rota.add(totalPontos - 1)
+            val melhorada = melhorarDoisOpt(rota)
+            val distancia = custoDaRota(melhorada, distances)
+            if (distancia < melhorDistancia) {
+                melhorDistancia = distancia
+                melhorRota = melhorada
+            }
+        }
+
+        val rotaFinal = melhorRota ?: return null
+        val duracao = custoDaRota(rotaFinal, durations)
+        if (!melhorDistancia.isFinite() || !duracao.isFinite()) return null
+        return PlanoRota(
+            entregasOrdenadas = rotaFinal.drop(1).dropLast(1).map { pontos[it] }.toMutableList(),
+            distanciaMetros = melhorDistancia,
+            duracaoSegundos = duracao
+        )
     }
     private fun ordenarEntregasPorDistancia(entregas: List<JSONObject>, origem: JSONObject, casa: JSONObject): MutableList<JSONObject> {
         val restantes = entregas.toMutableList()
@@ -1518,6 +1673,48 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
+        fun recalcularRotaSalvaPartindoDoGPS(paradasJson: String, casaJson: String) {
+            scope.launch {
+                try {
+                    val origemAtual = obterLocalizacaoAtualParaRota() ?: return@launch
+                    val paradas = JSONArray(paradasJson)
+                    val casa = JSONObject(casaJson)
+                    if (paradas.length() == 0 || !casa.has("lat") || !casa.has("lng")) return@launch
+
+                    val origem = JSONObject().apply {
+                        put("_tipo_rota", "origem")
+                        put("endereco", "Sua localização atual")
+                        put("lat", origemAtual.latitude)
+                        put("lng", origemAtual.longitude)
+                        put("precisao_m", if (origemAtual.hasAccuracy()) origemAtual.accuracy else JSONObject.NULL)
+                        put("capturada_em", origemAtual.time)
+                    }
+                    val entregas = (0 until paradas.length()).map { paradas.getJSONObject(it) }
+                    val pontos = mutableListOf<JSONObject>().apply {
+                        add(origem)
+                        addAll(entregas)
+                        add(casa)
+                    }
+                    val plano = otimizarPorDistanciaRodoviaria(pontos, entregas) ?: return@launch
+                    val ordenados = JSONArray().apply { plano.entregasOrdenadas.forEach { put(it) } }
+                    val info = JSONObject()
+                        .put("fonte", "OSRM matriz de ruas")
+                        .put("distancia_m", plano.distanciaMetros)
+                        .put("duracao_s", plano.duracaoSegundos)
+
+                    withContext(Dispatchers.Main) {
+                        binding.webView.evaluateJavascript(
+                            "if (window.atualizarRotaPartindoDoGPS) window.atualizarRotaPartindoDoGPS($ordenados, $origem, $casa, $info);",
+                            null
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.w("GPS", "Não foi possível recalcular rota salva a partir do GPS", e)
+                }
+            }
+        }
+
+        @JavascriptInterface
         fun salvarRotaOffline(rotaId: String, jsonStr: String) {
             prefs.edit()
                 .putString("offline_rota_$rotaId", jsonStr)
@@ -1595,6 +1792,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             runOnUiThread {
                 this@MainActivity.toggleCapturaAoVivo()
             }
+        }
+
+        @JavascriptInterface
+        fun gerarRota() {
+            runOnUiThread { this@MainActivity.processarRota() }
         }
 
         @JavascriptInterface
@@ -1689,8 +1891,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         @JavascriptInterface
         fun getFirebaseStatus(): String {
-            val url = prefs.getString("Firebase URL", "") ?: ""
-            val sala = prefs.getString("Firebase Sala", "rota_extra") ?: "rota_extra"
+            val url = getFirebaseBaseUrl()
+            val sala = getFirebaseSala()
             val status = JSONObject().apply {
                 put("configurado", url.isNotBlank())
                 put("url", url)

@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
-            --bg: #0d1117;
-            --surface: #161b22;
-            --surface-card: #21262d;
-            --surface-hover: #30363d;
-            --border: #30363d;
-            --ml-yellow: #FFE600;
-            --ml-yellow-dark: #d4be00;
-            --ml-blue: #2f81f7;
+            --bg: #0b1220;
+            --surface: #121d2e;
+            --surface-card: #1b293c;
+            --surface-hover: #25364d;
+            --border: #293b50;
+            --ml-yellow: #f8d85b;
+            --ml-yellow-dark: #e7c34b;
+            --ml-blue: #4c8dff;
             --ml-blue-hover: #58a6ff;
             --text-main: #f0f6fc;
             --text-muted: #8b949e;
@@ -892,6 +892,115 @@
             flex-direction: column;
             gap: 12px;
         }
+
+        /* Interface de trabalho: hierarquia simples e controles confortáveis. */
+        .nav-tabs { padding: 8px 12px; gap: 3px; background: #101a29; border-bottom-color: #253449; }
+        .tab-btn { min-height: 52px; border-radius: 12px; font-size: 10px; letter-spacing: .01em; }
+        .tab-btn svg { width: 21px; height: 21px; }
+        .tab-btn.active { background: rgba(248,216,91,.13); }
+        .content-area { padding: 16px; gap: 16px; }
+        .tab-content.active { gap: 16px; }
+        .card, .route-card { border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+        .route-card { border-left-width: 3px; padding: 16px; }
+        .route-card-stats { gap: 8px; }
+        .route-stat-item { border-radius: 12px; padding: 10px 6px; }
+        .route-stat-val { font-size: 17px; }
+        .btn-route-action, .btn-secondary, .btn-big-scan { border-radius: 12px; min-height: 44px; }
+        .dashboard-hero { padding: 20px; background: linear-gradient(135deg,#1e3045,#142133); border-color:#334a61; }
+        .dashboard-kicker { color: #f8d85b; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+        .dashboard-title { font-size: 22px; line-height: 1.2; font-weight: 800; margin-top: 8px; letter-spacing: -.03em; }
+        .dashboard-description { font-size: 13px; line-height: 1.5; color: #b4c2d2; margin: 8px 0 18px; }
+        .dashboard-actions { display:flex; gap:8px; }
+        .dashboard-actions .btn-big-scan { flex: 1; padding: 12px; font-size: 14px; }
+        .dashboard-actions .btn-secondary { padding: 10px 14px; }
+        #map-container { height: calc(100dvh - 215px); min-height: 360px; border: 1px solid #34465b; border-radius: 20px; background: #e9edf0; }
+        #map { background: #e9edf0; }
+        .leaflet-tile { filter: none; }
+        .leaflet-control-attribution { font-size: 9px !important; }
+        .leaflet-top.leaflet-left { top: 145px; }
+        .waze-hud-container { top:12px; left:12px; right:12px; border:1px solid rgba(255,255,255,.13); border-radius:16px; padding:12px; background:rgba(16,28,44,.96); box-shadow:0 8px 25px rgba(15,23,42,.28); }
+        .waze-turn-icon-box { background:#f8d85b; color:#182337; box-shadow:none; }
+        .waze-btn-app { background:#4c8dff; color:#fff; box-shadow:none; }
+        .waze-btn-concluir { box-shadow:none; }
+        .map-controls-overlay { bottom:18px; left:12px; right:12px; gap:8px; }
+        .btn-map-control { min-height:44px; border-radius:12px; background:#17283b; border-color:#344b60; box-shadow:0 4px 14px #12243a38; }
+        .car-gps-marker { width:56px; height:56px; }
+        .car-gps-pulse { width:44px; height:44px; background:rgba(56,124,255,.25); }
+        .car-gps-bubble { width:48px; height:48px; border:0; background:transparent; box-shadow:none; filter:drop-shadow(0 5px 4px #15273d88); transition:transform .35s ease; }
+        .car-gps-bubble svg { width:48px; height:48px; overflow:visible; }
+        @media (max-width: 380px) { .content-area { padding: 10px; } .waze-hud-container { padding:9px; } .waze-address-title { font-size:12px; } .btn-map-control { font-size:10px; } }
+
+        /* RotaML Driver — interface pensada para uma mão e telas pequenas. */
+        :root { --bg:#0d1421; --surface:#172333; --surface-card:#202e40; --surface-hover:#28394b; --border:#2b3c4e; --ml-yellow:#42e5c1; --ml-yellow-dark:#2fcdaa; --ml-blue:#8d9cff; --ml-blue-hover:#a9b5ff; --text-main:#f4f8fb; --text-muted:#9aabbb; --emerald:#42e5c1; }
+        body { background:var(--bg); height:100vh; height:100dvh; }
+        button, input { font-family:inherit; }
+        button:focus-visible, input:focus-visible { outline:2px solid #42e5c1; outline-offset:2px; }
+        .content-area { order:1; flex:1; min-height:0; padding:18px 16px 22px; display:block; overflow-y:auto; overscroll-behavior:contain; }
+        .tab-content.active { gap:16px; }
+        .nav-tabs { order:2; flex-shrink:0; padding:8px 8px max(8px, env(safe-area-inset-bottom)); background:#111b2a; border-top:1px solid #263647; border-bottom:0; overflow:visible; box-shadow:0 -8px 24px #080d172b; }
+        .tab-btn { min-width:0; min-height:52px; padding:5px 2px; gap:4px; color:#899aab; font-size:10px; font-weight:600; }
+        .tab-btn svg { width:21px; height:21px; stroke-width:1.8; }
+        .tab-btn.active { color:#42e5c1; background:transparent; }
+        .tab-btn.active svg { stroke:#42e5c1; }
+        .tab-btn.active::after { content:''; width:4px; height:4px; background:#42e5c1; border-radius:50%; }
+        .page-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:2px 0 0; }
+        .page-eyebrow { color:#42e5c1; text-transform:uppercase; letter-spacing:.13em; font-size:10px; font-weight:800; }
+        .page-title { color:#f5f8fc; font-size:26px; line-height:1.15; font-weight:800; letter-spacing:-.035em; margin-top:5px; }
+        .page-subtitle { color:#9aabbb; font-size:13px; line-height:1.5; margin-top:5px; }
+        .card, .route-card, .stop-card, .scanner-hero { border:1px solid #293b4d; border-radius:20px; box-shadow:0 8px 22px #050a1222; }
+        .dashboard-hero { position:relative; overflow:hidden; padding:22px; background:linear-gradient(135deg,#20394a,#1a2b40 70%); border-color:#365263; }
+        .dashboard-hero::after { content:''; position:absolute; width:130px; height:130px; right:-48px; top:-50px; border:25px solid #42e5c118; border-radius:50%; pointer-events:none; }
+        .dashboard-kicker { color:#42e5c1; }
+        .dashboard-title { font-size:23px; max-width:260px; }
+        .dashboard-description { max-width:290px; color:#bdcbd7; margin-bottom:18px; }
+        .dashboard-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; position:relative; z-index:1; }
+        .dashboard-actions .btn-big-scan, .dashboard-actions .btn-secondary { min-width:0; padding:12px 8px; font-size:13px; }
+        .btn-big-scan { background:#42e5c1; color:#092920; box-shadow:none; font-weight:800; min-height:50px; border-radius:14px; }
+        .btn-big-scan svg { stroke:#092920; }
+        .btn-secondary { background:#26374a; color:#edf6fb; border:1px solid #3b5063; min-height:44px; border-radius:13px; }
+        .quick-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .quick-action { display:flex; align-items:center; gap:12px; text-align:left; background:#172333; border:1px solid #2b3c4e; border-radius:17px; padding:14px; color:#f4f8fb; min-height:76px; }
+        .quick-icon { width:40px; height:40px; flex:none; display:grid; place-items:center; background:#293953; color:#acbaff; border-radius:13px; font-size:20px; }
+        .quick-action strong { display:block; font-size:13px; } .quick-action small { display:block; color:#9aabbb; font-size:11px; margin-top:4px; }
+        .section-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:3px 2px 10px; }
+        .section-heading strong { font-size:16px; letter-spacing:-.02em; }
+        .section-heading button { background:transparent; border:0; color:#42e5c1; font-size:12px; padding:10px; }
+        .route-card { background:#172333; border-left:1px solid #293b4d; padding:16px; margin-bottom:12px; }
+        .route-card-title { font-size:16px; } .route-card-meta { margin-top:6px; line-height:1.4; }
+        .route-card-status-badge.em_andamento { background:#42e5c118; color:#42e5c1; border:0; }
+        .route-card-status-badge.finalizada { border:0; }
+        .route-card-stats { margin:14px 0; }
+        .route-stat-item { background:#202f40; border:0; padding:11px 6px; }
+        .route-stat-lbl { margin-top:3px; letter-spacing:.04em; }
+        .btn-route-action { border-radius:12px; min-height:42px; font-size:12px; }
+        .btn-route-action.primary { background:#42e5c1; color:#092920; border-color:#42e5c1; }
+        .stop-card { background:#172333; border-left:1px solid #293b4d; padding:16px; margin-bottom:12px; }
+        .stop-card.stop-delivered { border-left:3px solid #42e5c1 !important; background:#172b32; }
+        .stop-number { font-size:11px; letter-spacing:.08em; color:#42e5c1; }
+        .recipient-name { font-size:16px; margin-top:6px !important; }
+        .stop-address { color:#c8d5df; line-height:1.5; margin:10px 0; }
+        .packages-container { border-radius:12px; background:#202e40; padding:12px; }
+        .btn-action-small { min-height:42px; border-radius:11px; }
+        .scanner-hero { background:#172333; border:1px solid #293b4d; text-align:left; padding:18px; }
+        .scanner-hero::before { display:none; }
+        .stat-box { border:0; border-radius:13px; padding:12px 4px; }
+        .input-dark { min-width:0; border-radius:12px; }
+        .zone-header { border-radius:14px; padding:14px; }
+        #map-container { height:calc(100vh - 100px); height:calc(100dvh - 100px); min-height:300px; border-radius:20px; }
+        .content-area.map-active { padding:8px; overflow:hidden; }
+        .content-area.map-active #tab-mapa { height:100%; }
+        .content-area.map-active #map-container { height:100%; flex:none; }
+        .waze-hud-container { background:rgba(18,30,45,.96); }
+        .waze-turn-icon-box { background:#42e5c1; color:#102c2b; }
+        .waze-sub-pill.status { color:#9cead8; }
+        .map-controls-overlay { display:grid; grid-template-columns:1fr 1fr; }
+        .btn-map-control { min-width:0; }
+        .btn-map-control.primary { background:#42e5c1; color:#092920; border-color:#42e5c1; }
+        .modal-overlay { align-items:flex-end; padding:0; background:#050b15b8; }
+        .modal-box { max-width:none; border-radius:24px 24px 0 0; padding:24px 20px max(24px, env(safe-area-inset-bottom)); gap:12px; background:#172333; }
+        .test-btn { min-height:72px; border-radius:15px; margin-bottom:0; }
+        .toast { bottom:76px; max-width:90%; text-align:center; }
+        @media (max-width:360px) { .content-area { padding-left:12px; padding-right:12px; } .quick-action { padding:11px; } .quick-icon { width:34px; height:34px; } .dashboard-title { font-size:21px; } }
     </style>
 </head>
 <body>
@@ -900,7 +1009,7 @@
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('tab-rotas', this)">
             <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/></svg>
-            Rotas
+            Início
         </button>
         <button class="tab-btn" onclick="switchTab('tab-paradas', this)">
             <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -916,7 +1025,7 @@
         </button>
         <button class="tab-btn" onclick="switchTab('tab-biper', this)">
             <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
-            Biper
+            Bipar
         </button>
     </div>
 
@@ -925,26 +1034,19 @@
 
         <!-- TAB 1: HUB DE ROTAS (BANCO DE DADOS FIREBASE & OFFLINE) -->
         <div id="tab-rotas" class="tab-content active">
-            <div class="card" style="border: 2px solid var(--ml-yellow); background: linear-gradient(145deg, #1c2214, #161b22);">
-                <div class="card-header" style="margin-bottom: 4px;">
-                    <span class="card-title" style="color: var(--ml-yellow); font-size: 15px;">
-                        📋 Banco de Dados Firebase (Nuvem & Offline)
-                    </span>
-                    <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window.Android && window.Android.abrirConfiguracoes ? window.Android.abrirConfiguracoes() : alert('Abra as configurações no topo ⚙️')">
-                        ⚙️ Config
-                    </button>
+            <div class="page-heading"><div><div class="page-eyebrow">Sua jornada</div><div class="page-title">Tudo pronto para sair?</div><div class="page-subtitle">Organize o dia, uma entrega de cada vez.</div></div></div>
+            <div class="card dashboard-hero">
+                <div class="dashboard-kicker">Comece por aqui</div>
+                <div class="dashboard-title">Sua próxima rota começa aqui.</div>
+                <p class="dashboard-description" id="resumo-leitura">Leia sua lista de entregas e monte o melhor percurso para o seu dia.</p>
+                <div class="dashboard-actions">
+                    <button class="btn-big-scan" onclick="abrirModalCriarRota()">＋ Ler entregas</button>
+                    <button class="btn-secondary" onclick="gerarRotaAtual()">Gerar rota →</button>
                 </div>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">
-                    Todas as rotas são <b>salvas automaticamente no banco de dados e na memória do aparelho</b> para funcionar com ou sem internet em qualquer celular!
-                </p>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-big-scan" style="padding: 12px; font-size: 14px; flex: 1.2;" onclick="abrirModalCriarRota()">
-                        ➕ Criar Nova Rota
-                    </button>
-                    <button class="btn-secondary" style="padding: 12px 14px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px;" onclick="recarregarRotasNuvem()">
-                        🔄 Atualizar
-                    </button>
-                </div>
+            </div>
+            <div class="quick-grid">
+                <button class="quick-action" onclick="switchTab('tab-mapa', document.querySelectorAll('.tab-btn')[2])"><span class="quick-icon">⌖</span><span><strong>Abrir mapa</strong><small>Veja seu percurso</small></span></button>
+                <button class="quick-action" onclick="switchTab('tab-biper', document.querySelectorAll('.tab-btn')[4])"><span class="quick-icon">▦</span><span><strong>Conferir</strong><small>Leia os pacotes</small></span></button>
             </div>
 
             <!-- Banner Rota Ativa -->
@@ -967,13 +1069,12 @@
 
             <!-- List of All Routes from Firebase -->
             <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-                        Rotas Salvas no Banco (<span id="total-rotas-contador">0</span>)
-                    </span>
+                <div class="section-heading">
+                    <strong>Minhas rotas <span id="total-rotas-contador">0</span></strong>
                     <span id="sync-rotas-status" style="font-size: 11px; color: #10b981; font-weight: 600;">
-                        ● Sincronizado ao vivo
+                        ● Verificando conexão
                     </span>
+                    <button onclick="recarregarRotasNuvem()" aria-label="Atualizar rotas">Atualizar</button>
                 </div>
                 <div id="lista-rotas-container">
                     <div class="card" style="text-align: center; color: var(--text-muted); padding: 30px 14px;">
@@ -985,6 +1086,7 @@
 
         <!-- TAB 2: PARADAS DETALHADAS -->
         <div id="tab-paradas" class="tab-content">
+            <div class="page-heading"><div><div class="page-eyebrow">Sua rota</div><div class="page-title">Paradas</div><div class="page-subtitle">Acompanhe e finalize suas entregas.</div></div></div>
             <div class="card" style="padding: 12px 14px; border-left: 4px solid var(--ml-yellow);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div>
@@ -1055,7 +1157,7 @@
 
                     <div class="waze-hud-sub-row">
                         <span id="waze-route-title" class="waze-sub-pill status">
-                            ⚡ Rota nas Ruas (0 paradas)
+                            Aguardando rota
                         </span>
                         <span id="waze-entregas-badge" class="waze-sub-pill entregas">
                             0/0 Entregues
@@ -1071,14 +1173,14 @@
 
                 <!-- Floating Controls Overlay Bottom -->
                 <div class="map-controls-overlay">
+                    <button class="btn-map-control" onclick="centralizarNoVeiculo()" aria-label="Centralizar na minha localização">
+                        ⌖ Minha posição
+                    </button>
                     <button class="btn-map-control" id="btn-seguir-carro" onclick="toggleSeguirCarro()">
-                        🎯 Seguir Carro
+                        Seguir carro
                     </button>
                     <button class="btn-map-control primary" onclick="executarOtimizacaoRota()">
                         ⚡ Otimizar
-                    </button>
-                    <button class="btn-map-control" onclick="alternarVisaoRota()">
-                        🔄 Ruas / Bruta
                     </button>
                     <button class="btn-map-control" id="btn-map-finalizar-rota" onclick="alternarFinalizarRotaAtiva()" style="background: #10b981; color: #fff; border-color: #059669;">
                         🏁 Finalizar
@@ -1089,6 +1191,7 @@
 
         <!-- TAB 4: ORGANIZAÇÃO NO CARRO -->
         <div id="tab-carro" class="tab-content">
+            <div class="page-heading"><div><div class="page-eyebrow">Tudo no lugar</div><div class="page-title">Meu veículo</div><div class="page-subtitle">Organize os pacotes pela ordem de entrega.</div></div></div>
             <div class="card" style="border-left: 4px solid var(--ml-yellow); padding: 10px 14px;">
                 <div style="font-size: 13px; font-weight: bold; color: var(--ml-yellow);">Divisão por Zonas do Carro:</div>
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
@@ -1128,10 +1231,11 @@
 
         <!-- TAB 5: BIPER / CONFERÊNCIA -->
         <div id="tab-biper" class="tab-content">
+            <div class="page-heading"><div><div class="page-eyebrow">Carregamento</div><div class="page-title">Conferir pacotes</div><div class="page-subtitle">Leia a etiqueta para encontrar sua parada.</div></div></div>
             <div class="scanner-hero">
                 <div class="card-header" style="justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="card-title" style="color: var(--ml-yellow);">
-                        ⚡ Scanner de Carregamento
+                        Resumo do carregamento
                     </span>
                     <div style="display: flex; gap: 6px;">
                         <button id="btn-sound-toggle" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; font-weight: 700; color: #10b981;" onclick="toggleMuteSound()">
@@ -1160,7 +1264,7 @@
 
                 <button class="btn-big-scan" onclick="acionarScannerCamera()">
                     <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
-                    BIPAR ETIQUETA / QR
+                    Ler etiqueta ou QR
                 </button>
 
                 <div class="manual-input-box">
@@ -1214,12 +1318,12 @@
                 <button onclick="fecharModalCriarRota()" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-                Leia uma rota diretamente do app Envios Extra ou selecione os prints da rota. Não há rotas de exemplo neste fluxo.
+                Escolha como deseja importar as paradas do Envios Extra.
             </p>
 
             <button class="test-btn primary" onclick="fecharModalCriarRota(); acionarLeituraTelaAoVivo();" style="border-color: var(--ml-yellow);">
                 <div>
-                    <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">⚡ 1. Ler tela ao vivo</div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">Ler tela ao vivo</div>
                     <div style="font-size: 11px; color: var(--text-muted);">Leia a tela do aplicativo Envios Extra enquanto rola as paradas</div>
                 </div>
                 <span style="font-size: 18px;">📱</span>
@@ -1227,7 +1331,7 @@
 
             <button class="test-btn highlight" onclick="fecharModalCriarRota(); acionarOcrGaleria();" style="border-color: #58a6ff;">
                 <div>
-                    <div style="font-size: 14px; font-weight: 800; color: #58a6ff;">📷 2. Ler fotos da galeria</div>
+                    <div style="font-size: 14px; font-weight: 800; color: #a9b5ff;">Ler fotos da galeria</div>
                     <div style="font-size: 11px; color: var(--text-muted);">Extrai endereços de prints do aplicativo Envios Extra</div>
                 </div>
                 <span style="font-size: 18px;">🖼️</span>
@@ -1280,6 +1384,19 @@
                 showToast("Leitura ao vivo disponível no aplicativo Android.");
             }
         }
+
+        function gerarRotaAtual() {
+            if (window.Android && window.Android.gerarRota) window.Android.gerarRota();
+            else showToast('A geração de rotas está disponível no aplicativo Android.');
+        }
+
+        window.atualizarResumoLeitura = function(total, lendo) {
+            const resumo = document.getElementById('resumo-leitura');
+            if (!resumo) return;
+            if (lendo) resumo.textContent = `Leitura em andamento · ${total} ${total === 1 ? 'parada encontrada' : 'paradas encontradas'}.`;
+            else if (total > 0) resumo.textContent = `${total} ${total === 1 ? 'parada encontrada' : 'paradas encontradas'}. Agora você pode gerar sua rota.`;
+            else resumo.textContent = 'Leia sua lista de entregas e monte o melhor percurso para o seu dia.';
+        };
 
         // Polyfill Android interface for browser testing
         if (typeof window.Android === 'undefined') {
@@ -1404,6 +1521,8 @@
         let carLatLng = null;
         let carHeading = 0;
         let carSpeedKmh = 0;
+        let carAccuracy = 0;
+        let carAnimation = null;
         let isSeguirCarroAtivo = false;
 
         // Init Map
@@ -1416,13 +1535,13 @@
                 }
                 map = L.map('map', {
                     zoomControl: true,
-                    attributionControl: false
+                    attributionControl: true
                 }).setView([-22.8850, -47.0580], 14); // Centro Campinas
 
                 // Camada OpenStreetMap com fallback offline
-                let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                let tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                     maxZoom: 19,
-                    attribution: '© OpenStreetMap'
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 });
                 tileLayer.on('tileerror', function() {
                     // Se estiver sem internet, o mapa mantém canvas escuro e as ruas continuam visíveis!
@@ -1454,13 +1573,21 @@
                     <div class="car-gps-marker">
                         <div class="car-gps-pulse"></div>
                         <div class="car-gps-bubble" style="${rot}">
-                            🚗
+                            <svg viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M17 12 24 4 31 12" fill="#3779e8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M13 35h22l-2 5H15z" fill="#142a4f"/>
+                                <path d="M12 29 14 16q1-5 10-5t10 5l2 13-2 8H14z" fill="#2461c4" stroke="#fff" stroke-width="1.5"/>
+                                <path d="M16 20 18 15q6-3 12 0l2 5z" fill="#bde9ff"/>
+                                <path d="M15 23q9-3 18 0l1 7q-10 3-20 0z" fill="#5598f8"/>
+                                <path d="M14 31q10 3 20 0l-1 4q-9 3-18 0z" fill="#193d79"/>
+                                <path d="M15 31h4M29 31h4" stroke="#ffdf81" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
                         </div>
                     </div>
                 `,
-                iconSize: [38, 38],
-                iconAnchor: [19, 19],
-                popupAnchor: [0, -19]
+                iconSize: [56, 56],
+                iconAnchor: [28, 28],
+                popupAnchor: [0, -25]
             });
         }
 
@@ -1469,6 +1596,7 @@
             carLatLng = [lat, lng];
             carHeading = bearing || 0;
             carSpeedKmh = Math.max(0, Math.round(speedKmh || 0));
+            carAccuracy = Math.max(0, accuracy || 0);
 
             // Atualiza HUD no mapa
             const speedEl = document.getElementById('waze-speed-badge');
@@ -1485,11 +1613,21 @@
                     icon: criarIconeCarro(bearing),
                     zIndexOffset: 1000
                 }).addTo(map);
-                carMarker.bindPopup(`<b>🚗 Seu Veículo</b><br>Velocidade: ${carSpeedKmh} km/h<br>Precisão GPS: ±${Math.round(accuracy || 0)}m`);
+                carMarker.bindPopup('');
             } else {
-                carMarker.setLatLng([lat, lng]);
+                if (carAnimation) cancelAnimationFrame(carAnimation);
+                const start = carMarker.getLatLng();
+                const startTime = performance.now();
+                const animate = now => {
+                    const t = Math.min(1, (now - startTime) / 700);
+                    carMarker.setLatLng([start.lat + (lat - start.lat) * t, start.lng + (lng - start.lng) * t]);
+                    if (t < 1) carAnimation = requestAnimationFrame(animate);
+                    else carAnimation = null;
+                };
+                carAnimation = requestAnimationFrame(animate);
                 carMarker.setIcon(criarIconeCarro(bearing));
             }
+            carMarker.setPopupContent(`<b>Sua posição</b><br>Velocidade: ${carSpeedKmh} km/h<br>Precisão GPS: ±${Math.round(carAccuracy)} m`);
 
             // Modo Seguir Carro (Navegação Ativa)
             if (isSeguirCarroAtivo && map) {
@@ -1513,6 +1651,16 @@
             } else {
                 showToast("Modo livre do mapa ativado");
             }
+        }
+
+        function centralizarNoVeiculo() {
+            if (!map || !carLatLng) {
+                if (window.Android && window.Android.solicitarRastreamentoGPS) window.Android.solicitarRastreamentoGPS();
+                showToast('Aguardando sua localização. Verifique o GPS e as permissões.');
+                return;
+            }
+            map.setView(carLatLng, Math.max(map.getZoom(), 16), { animate: true });
+            showToast('Mapa centralizado na sua posição');
         }
 
         function atualizarBotaoSeguirCarro() {
@@ -1585,9 +1733,9 @@
             if (carLatLng) {
                 let distKm = calcDistanceKm(carLatLng[0], carLatLng[1], proxParada.lat, proxParada.lng);
                 if (distKm < 1.0) {
-                    distStr = `A cerca de ${Math.round(distKm * 1000)} metros daqui`;
+                    distStr = `A ${Math.round(distKm * 1000)} m em linha reta`;
                 } else {
-                    distStr = `A cerca de ${distKm.toFixed(1)} km daqui`;
+                    distStr = `A ${distKm.toFixed(1)} km em linha reta`;
                 }
             }
             if (distEl) distEl.innerText = distStr;
@@ -1601,6 +1749,9 @@
             const target = document.getElementById(tabId);
             if (target) target.classList.add('active');
             if (el) el.classList.add('active');
+            const contentArea = document.querySelector('.content-area');
+            contentArea.classList.toggle('map-active', tabId === 'tab-mapa');
+            contentArea.scrollTop = 0;
 
             if (tabId === 'tab-rotas') {
                 recarregarRotasNuvem();
@@ -1609,6 +1760,7 @@
                 setTimeout(() => {
                     if (map) {
                         map.invalidateSize();
+                        if (carLatLng && !carMarker) window.atualizarPosicaoCarro(carLatLng[0], carLatLng[1], carHeading, carSpeedKmh, carAccuracy);
                         renderizarMapa();
                         if (isSeguirCarroAtivo && carLatLng) {
                             map.setView(carLatLng, Math.max(map.getZoom(), 16));
@@ -2365,8 +2517,8 @@
                             <button class="btn-action-small ${isEntregue ? 'btn-desfazer-parada' : 'btn-finalizar-parada'}" onclick="alternarFinalizarParada(${i})">
                                 ${isEntregue ? '↩️ Desfazer' : '✅ Finalizar'}
                             </button>
-                            <button class="btn-action-small" onclick="testarBipeCodigo('${p.pacotes && p.pacotes[0] ? p.pacotes[0].id : ''}')" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
-                                🏷️ Bipar
+                            <button class="btn-action-small" onclick="acionarScannerCamera()" style="background: var(--surface-card); color: var(--text-muted); font-size: 11px;">
+                                Bipar
                             </button>
                         </div>
                     </div>
@@ -2567,10 +2719,10 @@
 
             // Se já tem traçado real das ruas em cache, desenha imediatamente!
             if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
-                renderizarTrilhasRuas(rotaGeometriaRuasCache);
+                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
             } else if (latlngs.length > 0) {
                 // Desenha linha inicial e busca ruas reais no OSRM
-                renderizarTrilhasRuas(latlngs);
+                renderizarTrilhasRuas(latlngs, false);
                 baixarGeometriaRuasReais();
             }
 
@@ -2866,6 +3018,16 @@
             if (!rotaGeometriaRuasCache) {
                 baixarGeometriaRuasReais();
             }
+
+            // Rotas antigas podem ter sido salvas com outra posição de início.
+            // Ao abrir uma rota ainda não iniciada, recalcula a origem com o
+            // GPS atual para que o trecho até a primeira parada não desapareça.
+            const todosTemCoordenadas = rotaAtual.every(p => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)));
+            const nenhumaEntregaIniciada = rotaAtual.every(p => !p.finalizada);
+            if (window.Android && window.Android.recalcularRotaSalvaPartindoDoGPS && rotaCasa && todosTemCoordenadas && nenhumaEntregaIniciada) {
+                showToast("📍 Atualizando a rota a partir da sua localização atual...");
+                window.Android.recalcularRotaSalvaPartindoDoGPS(JSON.stringify(rotaAtual), JSON.stringify(rotaCasa));
+            }
         }
 
         function alternarStatusRotaCard(rotaId, novoStatus) {
@@ -2904,6 +3066,30 @@
         // -------------------------------------------------------------
         // CARREGAMENTO E CRIAÇÃO AUTOMÁTICA DE ROTAS
         // -------------------------------------------------------------
+        window.atualizarRotaPartindoDoGPS = function(paradas, origem, casa, routeInfo) {
+            if (!Array.isArray(paradas) || paradas.length === 0 || !origem || !casa) return;
+
+            rotaOrigem = { ...origem };
+            rotaCasa = { ...casa };
+            rotaPlanejadaInfo = routeInfo && typeof routeInfo === 'object' ? { ...routeInfo } : null;
+            rotaBrutaOriginal = paradas.map(p => ({ ...p }));
+            rotaAtual = aplicarMetadadosParadas(rotaBrutaOriginal.map(p => ({ ...p })));
+            isRotaOtimizada = true;
+            rotaGeometriaRuasCache = null;
+
+            atualizarEstatisticas();
+            renderizarParadas();
+            renderizarZonasCarro();
+            renderizarMapa();
+            salvarEstadoRotaAtivaNoBanco();
+            baixarGeometriaRuasReais();
+
+            const km = rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0
+                ? ` • ${(Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1)} km pelas ruas`
+                : '';
+            showToast(`✅ Rota recalculada do GPS atual até sua casa${km}`);
+        };
+
         window.carregarRota = function(paradas, rotaIdOpcional, tituloOpcional, origemOpcional, casaOpcional, routeInfoOpcional) {
             if (typeof paradas === 'string') {
                 try { paradas = JSON.parse(paradas); } catch (e) { return; }
