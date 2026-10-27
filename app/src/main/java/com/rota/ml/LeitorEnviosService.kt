@@ -40,6 +40,7 @@ class LeitorEnviosService : AccessibilityService() {
         val paradasDetectadas = mutableListOf<ParadaExtra>()
         var instance: LeitorEnviosService? = null
         var onUpdateListener: ((totalLinhas: Int, totalParadas: Int) -> Unit)? = null
+        var onScreenshotCapabilityError: (() -> Unit)? = null
 
         fun limpar() {
             textosCapturados.clear()
@@ -55,6 +56,7 @@ class LeitorEnviosService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ultimoTamanhoParadas = 0
     private var ocrEmAndamento = false
+    private var capturaNativaIndisponivel = false
     private val capturaOcrRunnable = object : Runnable {
         override fun run() {
             if (!capturando) return
@@ -79,6 +81,12 @@ class LeitorEnviosService : AccessibilityService() {
         serviceInfo = info
 
         Log.d("LeitorEnviosService", "Serviço de Acessibilidade conectado com sucesso!")
+    }
+
+    fun podeCapturarTela(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+        val capabilities = serviceInfo?.capabilities ?: 0
+        return capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_TAKE_SCREENSHOT != 0
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -179,6 +187,7 @@ class LeitorEnviosService : AccessibilityService() {
 
     fun iniciarCapturaComOverlay() {
         capturando = true
+        capturaNativaIndisponivel = !podeCapturarTela()
         limpar()
         ultimoTamanhoParadas = 0
         mainHandler.post {
@@ -187,7 +196,11 @@ class LeitorEnviosService : AccessibilityService() {
             // textos para a acessibilidade. OCR periódico lê o que realmente
             // está visível, inclusive depois de cada rolagem.
             mainHandler.removeCallbacks(capturaOcrRunnable)
-            mainHandler.postDelayed(capturaOcrRunnable, 900L)
+            if (!capturaNativaIndisponivel) {
+                mainHandler.postDelayed(capturaOcrRunnable, 900L)
+            } else {
+                txtOverlayStatus?.text = "⚡ Aguardando autorização de captura..."
+            }
         }
     }
 
@@ -355,6 +368,7 @@ class LeitorEnviosService : AccessibilityService() {
 
     // Executa OCR da tela através da API nativa de captura de tela de acessibilidade do Android 11+
     private fun executarOcrDaTelaAtual(silencioso: Boolean) {
+        if (capturaNativaIndisponivel) return
         if (ocrEmAndamento) return
         ocrEmAndamento = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -383,7 +397,14 @@ class LeitorEnviosService : AccessibilityService() {
                 })
             } catch (e: Exception) {
                 ocrEmAndamento = false
-                txtOverlayStatus?.text = "⚡ Erro OCR: ${e.message}"
+                if (e is SecurityException && e.message?.contains("capability", true) == true) {
+                    capturaNativaIndisponivel = true
+                    mainHandler.removeCallbacks(capturaOcrRunnable)
+                    txtOverlayStatus?.text = "⚡ Usando captura autorizada do Android..."
+                    onScreenshotCapabilityError?.invoke()
+                } else {
+                    txtOverlayStatus?.text = "⚡ Erro OCR: ${e.message}"
+                }
             }
         } else {
             ocrEmAndamento = false
@@ -413,6 +434,15 @@ class LeitorEnviosService : AccessibilityService() {
             ocrEmAndamento = false
             Log.e("LeitorEnviosService", "Erro processando OCR", e)
         }
+    }
+
+    fun processarBitmapCapturado(bitmap: Bitmap) {
+        if (!capturando || ocrEmAndamento) {
+            bitmap.recycle()
+            return
+        }
+        ocrEmAndamento = true
+        processarBitmapComMlKit(bitmap)
     }
 
     private fun concluirCapturaViaOverlay() {
@@ -453,6 +483,7 @@ class LeitorEnviosService : AccessibilityService() {
         capturando = false
         mainHandler.removeCallbacks(capturaOcrRunnable)
         instance = null
+        onScreenshotCapabilityError = null
         removerOverlay()
         super.onDestroy()
     }

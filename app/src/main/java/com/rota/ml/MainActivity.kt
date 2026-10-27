@@ -6,15 +6,25 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.PixelFormat
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.ImageReader
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.MediaStore
@@ -56,10 +66,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var isAudioMuted = false
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private var mediaProjection: MediaProjection? = null
+    private var virtualDisplay: VirtualDisplay? = null
+    private var imageReader: ImageReader? = null
+    private var ultimoFrameProjecao = 0L
+    private val projectionHandler = Handler(Looper.getMainLooper())
 
     private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (!uris.isNullOrEmpty()) {
             processarImagensGaleria(uris)
+        }
+    }
+
+    private val screenCaptureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (result.resultCode == RESULT_OK && data != null) {
+            iniciarCapturaPorProjecao(result.resultCode, data)
+        } else {
+            LeitorEnviosService.instance?.pararCapturaEFecharOverlay()
+            atualizarBotaoLeitor()
+            Toast.makeText(this, "A autorização de captura de tela é necessária para ler ao vivo neste aparelho.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -83,6 +109,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         atualizarBotaoMute()
         setupListeners()
         setupLeitorListener()
+        LeitorEnviosService.onScreenshotCapabilityError = {
+            runOnUiThread {
+                if (LeitorEnviosService.capturando && mediaProjection == null) {
+                    solicitarCapturaPorProjecao()
+                }
+            }
+        }
 
         if (intent?.getBooleanExtra("EXTRA_PROCESSAR_AUTOMATICO", false) == true) {
             processarRota()
@@ -360,16 +393,119 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         if (!LeitorEnviosService.capturando) {
             leitor.iniciarCapturaComOverlay()
+            if (!leitor.podeCapturarTela()) {
+                solicitarCapturaPorProjecao()
+            }
             binding.btnLer.text = "⏹ Lendo (0)..."
             binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
             Toast.makeText(this, "Abra o app Envios Extra e role a lista devagar. A tela visível será lida automaticamente.", Toast.LENGTH_LONG).show()
         } else {
             leitor.pararCapturaEFecharOverlay()
+            pararCapturaPorProjecao()
             val total = LeitorEnviosService.paradasDetectadas.size
             binding.btnLer.text = if (total > 0) "1. Ler Tela ($total)" else "1. Ler Tela"
             binding.btnLer.setTextColor(Color.parseColor("#F3F4F6"))
             Toast.makeText(this, "Captura concluída: $total paradas identificadas!", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun solicitarCapturaPorProjecao() {
+        if (mediaProjection != null) return
+        try {
+            val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            Toast.makeText(this, "Autorize a captura de tela para ativar a leitura ao vivo.", Toast.LENGTH_LONG).show()
+            screenCaptureLauncher.launch(manager.createScreenCaptureIntent())
+        } catch (e: Exception) {
+            Log.e("ScreenCapture", "Não foi possível solicitar captura de tela", e)
+            LeitorEnviosService.instance?.pararCapturaEFecharOverlay()
+            atualizarBotaoLeitor()
+            Toast.makeText(this, "Este aparelho não permitiu a captura de tela ao vivo.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun iniciarCapturaPorProjecao(resultCode: Int, data: Intent) {
+        try {
+            val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val projection = manager.getMediaProjection(resultCode, data)
+            mediaProjection = projection
+
+            val metrics = resources.displayMetrics
+            val width = metrics.widthPixels
+            val height = metrics.heightPixels
+            val density = metrics.densityDpi
+            val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+            imageReader = reader
+            ultimoFrameProjecao = 0L
+
+            projection.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    runOnUiThread {
+                        pararCapturaPorProjecao()
+                    }
+                }
+            }, projectionHandler)
+
+            reader.setOnImageAvailableListener({ imageReader ->
+                val agora = SystemClock.elapsedRealtime()
+                val image = imageReader.acquireLatestImage() ?: return@setOnImageAvailableListener
+                if (agora - ultimoFrameProjecao < 1400L) {
+                    image.close()
+                    return@setOnImageAvailableListener
+                }
+                ultimoFrameProjecao = agora
+                val bitmap = converterImagemParaBitmap(image, width, height)
+                image.close()
+                bitmap?.let { LeitorEnviosService.instance?.processarBitmapCapturado(it) }
+            }, projectionHandler)
+
+            virtualDisplay = projection.createVirtualDisplay(
+                "RotaML-ScreenCapture",
+                width,
+                height,
+                density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface,
+                null,
+                projectionHandler
+            )
+            Toast.makeText(this, "Captura autorizada. Abra o Envios Extra e role as paradas.", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e("ScreenCapture", "Erro iniciando projeção da tela", e)
+            pararCapturaPorProjecao()
+            LeitorEnviosService.instance?.pararCapturaEFecharOverlay()
+            atualizarBotaoLeitor()
+            Toast.makeText(this, "Erro ao iniciar a captura de tela: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun converterImagemParaBitmap(image: android.media.Image, width: Int, height: Int): Bitmap? {
+        return try {
+            val plane = image.planes.firstOrNull() ?: return null
+            val buffer = plane.buffer
+            val pixelStride = plane.pixelStride
+            val rowStride = plane.rowStride
+            val rowPadding = rowStride - pixelStride * width
+            val paddedWidth = width + rowPadding / pixelStride
+            val paddedBitmap = Bitmap.createBitmap(paddedWidth, height, Bitmap.Config.ARGB_8888)
+            paddedBitmap.copyPixelsFromBuffer(buffer)
+            val bitmap = Bitmap.createBitmap(paddedBitmap, 0, 0, width, height)
+            paddedBitmap.recycle()
+            bitmap
+        } catch (e: Exception) {
+            Log.e("ScreenCapture", "Erro convertendo frame da tela", e)
+            null
+        }
+    }
+
+    private fun pararCapturaPorProjecao() {
+        virtualDisplay?.release()
+        virtualDisplay = null
+        imageReader?.close()
+        imageReader = null
+        val projection = mediaProjection
+        mediaProjection = null
+        projection?.stop()
+        ultimoFrameProjecao = 0L
     }
 
     private fun abrirSeletorGaleria() {
@@ -1667,6 +1803,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
         locationListener?.let { locationManager?.removeUpdates(it) }
+        pararCapturaPorProjecao()
+        LeitorEnviosService.onScreenshotCapabilityError = null
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
