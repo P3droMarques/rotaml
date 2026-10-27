@@ -1935,6 +1935,10 @@
             return n != null && Number.isInteger(Number(n)) && Number(n) > 0 ? Number(n) : null;
         }
 
+        function escaparTexto(valor) {
+            return String(valor || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        }
+
         function obterEtiquetaParada(parada) {
             const texto = String((parada && parada.etiqueta_base) || (parada && parada.pacotes && parada.pacotes[0] && parada.pacotes[0].etiqueta) || '').toUpperCase();
             return (texto.match(/[A-Z][A-Z0-9]{1,30}_\d{1,3}(?!\d)/) || [])[0] || '';
@@ -2646,6 +2650,7 @@
                         <div class="stop-address">
                             📍 ${p.endereco}${p.complemento ? ' (' + p.complemento + ')' : ''}<br>
                             ${p.bairro ? p.bairro + ' - ' : ''}${p.cidade || 'Campinas'}${p.cep ? ' (CEP: ' + p.cep + ')' : ''}
+                            ${p.ocr_endereco_alternativo ? `<div style="color:#fbbf24; margin-top:5px;">⚠ O OCR também leu “${escaparTexto(p.ocr_endereco_alternativo)}”. Confira o endereço no Envios.</div>` : ''}
                         </div>
 
                         <div class="packages-container">

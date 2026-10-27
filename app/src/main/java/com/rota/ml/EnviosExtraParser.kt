@@ -2,6 +2,8 @@ package com.rota.ml
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.Normalizer
+import java.util.Locale
 import java.util.regex.Pattern
 
 data class ParadaExtra(
@@ -14,6 +16,7 @@ data class ParadaExtra(
     var unidades: Int = 0,
     var etiqueta: String = "",
     var etiquetaIncompleta: Boolean = false,
+    var enderecoAlternativo: String = "",
     var janela: String = "",
     var destinatario: String = ""
 ) {
@@ -28,6 +31,7 @@ data class ParadaExtra(
         obj.put("cidade", cidade.ifBlank { "Campinas" })
         obj.put("cep", cep)
         obj.put("janela", janela)
+        obj.put("ocr_endereco_alternativo", enderecoAlternativo)
 
         val pacotesArray = JSONArray()
         val qtd = if (unidades > 0) unidades else 0
@@ -60,18 +64,48 @@ data class ParadaExtra(
 
 object EnviosExtraParser {
 
+    private fun normalizarEndereco(valor: String): String {
+        val texto = Normalizer.normalize(valor.lowercase(Locale.ROOT), Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+            .replace(Regex("[^a-z0-9]+"), " ")
+            .trim()
+            .replace(Regex("\\s+"), " ")
+        return texto.replace(Regex("^r\\s+"), "rua ")
+            .replace(Regex("^av\\s+"), "avenida ")
+            .replace(Regex("^al\\s+"), "alameda ")
+            .replace(Regex("^tv\\s+"), "travessa ")
+    }
+
+    private fun etiquetaConfiavel(parada: ParadaExtra): String? {
+        if (parada.etiquetaIncompleta) return null
+        val etiqueta = parada.etiqueta.uppercase(Locale.ROOT).replace(Regex("[\\s#]"), "")
+        val partes = Regex("^[A-Z][A-Z0-9]{1,30}_(\\d{1,3})$").matchEntire(etiqueta) ?: return null
+        val numeroEtiqueta = partes.groupValues[1].toIntOrNull() ?: return null
+        if (parada.numero > 0 && parada.numero != numeroEtiqueta) return null
+        return etiqueta
+    }
+
     fun mesclarLeituras(destino: MutableList<ParadaExtra>, novas: List<ParadaExtra>) {
         for (nova in novas) {
-            val endereco = nova.endereco.trim().lowercase()
+            val endereco = normalizarEndereco(nova.endereco)
+            val etiquetaNova = etiquetaConfiavel(nova)
             val existente = destino.firstOrNull { antiga ->
-                antiga.endereco.trim().lowercase() == endereco &&
-                    (antiga.numero <= 0 || nova.numero <= 0 || antiga.numero == nova.numero)
+                val numerosCompativeis = antiga.numero <= 0 || nova.numero <= 0 || antiga.numero == nova.numero
+                val etiquetaAntiga = etiquetaConfiavel(antiga)
+                val mesmoEndereco = endereco.isNotBlank() && normalizarEndereco(antiga.endereco) == endereco
+                val mesmaEtiqueta = etiquetaAntiga != null && etiquetaAntiga == etiquetaNova
+                val etiquetasCompativeis = etiquetaAntiga == null || etiquetaNova == null || etiquetaAntiga == etiquetaNova ||
+                    (mesmoEndereco && antiga.numero > 0 && antiga.numero == nova.numero)
+                numerosCompativeis && etiquetasCompativeis && (mesmoEndereco || mesmaEtiqueta)
             }
             if (existente == null) {
                 destino.add(nova.copy())
                 continue
             }
             if (existente.numero <= 0 && nova.numero > 0) existente.numero = nova.numero
+            if (normalizarEndereco(existente.endereco) != endereco && existente.enderecoAlternativo.isBlank()) {
+                existente.enderecoAlternativo = nova.endereco
+            }
             if (existente.cep.isBlank()) existente.cep = nova.cep
             if (existente.bairro.isBlank()) existente.bairro = nova.bairro
             if (existente.complemento.isBlank()) existente.complemento = nova.complemento
@@ -104,7 +138,7 @@ object EnviosExtraParser {
     private val NUMERO_ENDERECO_SEPARADO_PATTERN = Pattern.compile("^(\\d{2,5})(?:\\s*[✓✔✿✾❀].*)?$")
 
     fun parseLinhas(linhas: List<String>): List<ParadaExtra> {
-        val paradasMap = LinkedHashMap<String, ParadaExtra>()
+        val paradas = mutableListOf<ParadaExtra>()
         var currentStop: ParadaExtra? = null
         var lastParadaNum = 0
         var lastJanela = ""
@@ -114,18 +148,7 @@ object EnviosExtraParser {
         fun salvarCurrent() {
             currentStop?.let { p ->
                 if (p.endereco.isNotBlank()) {
-                    val key = p.endereco.lowercase().trim() + "|" + p.numero
-                    val existing = paradasMap[key]
-                    if (existing == null) {
-                        paradasMap[key] = p
-                    } else {
-                        // Mescla informações mais ricas
-                        if (existing.cep.isBlank() && p.cep.isNotBlank()) existing.cep = p.cep
-                        if (existing.etiqueta.isBlank() && p.etiqueta.isNotBlank()) existing.etiqueta = p.etiqueta
-                        if (existing.unidades <= 1 && p.unidades > 1) existing.unidades = p.unidades
-                        if (existing.complemento.isBlank() && p.complemento.isNotBlank()) existing.complemento = p.complemento
-                        if (existing.numero <= 0 && p.numero > 0) existing.numero = p.numero
-                    }
+                    mesclarLeituras(paradas, listOf(p))
                 }
             }
             currentStop = null
@@ -278,8 +301,7 @@ object EnviosExtraParser {
 
         salvarCurrent()
 
-        val resultado = paradasMap.values.toList()
-        return resultado
+        return paradas
     }
 
     private fun isLinhaDeEndereco(s: String): Boolean {
