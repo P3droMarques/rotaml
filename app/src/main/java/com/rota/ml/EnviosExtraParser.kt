@@ -19,6 +19,7 @@ data class ParadaExtra(
     fun toJson(): JSONObject {
         val obj = JSONObject()
         obj.put("parada_num", if (numero > 0) numero else 1)
+        obj.put("parada_original", if (numero > 0) numero else JSONObject.NULL)
         obj.put("destinatario", if (destinatario.isNotBlank()) destinatario else (complemento.ifBlank { "Parada ${if (numero > 0) numero else 1}" }))
         obj.put("endereco", endereco)
         obj.put("complemento", complemento)

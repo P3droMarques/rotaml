@@ -1000,6 +1000,10 @@
         .modal-box { max-width:none; border-radius:24px 24px 0 0; padding:24px 20px max(24px, env(safe-area-inset-bottom)); gap:12px; background:#172333; }
         .test-btn { min-height:72px; border-radius:15px; margin-bottom:0; }
         .toast { bottom:76px; max-width:90%; text-align:center; }
+        .route-metrics { display:flex; gap:8px; flex-wrap:wrap; margin-top:2px; }
+        .route-metric { background:#26394d; color:#ecf7f8; border-radius:8px; padding:5px 8px; font-size:11px; line-height:1.2; }
+        .route-metric strong { color:#74e7cf; }
+        .stop-original { font-size:11px; color:#b5c7d5; font-weight:600; }
         @media (max-width:360px) { .content-area { padding-left:12px; padding-right:12px; } .quick-action { padding:11px; } .quick-icon { width:34px; height:34px; } .dashboard-title { font-size:21px; } }
     </style>
 </head>
@@ -1170,6 +1174,10 @@
                             🎯 Seguir Carro
                         </button>
                     </div>
+                    <div class="route-metrics" aria-label="Resumo da rota">
+                        <span id="mapa-distancia-restante" class="route-metric">Restante: calculando</span>
+                        <span id="mapa-economia" class="route-metric">Economia: indisponível</span>
+                    </div>
                 </div>
 
                 <!-- Floating Controls Overlay Bottom -->
@@ -1183,6 +1191,9 @@
                     </button>
                     <button class="btn-map-control primary" onclick="executarOtimizacaoRota()">
                         ⚡ Otimizar
+                    </button>
+                    <button class="btn-map-control" id="btn-rota-completa" onclick="alternarRotaCompleta()" aria-pressed="false">
+                        Mostrar rota completa
                     </button>
                     <button class="btn-map-control" id="btn-map-finalizar-rota" onclick="alternarFinalizarRotaAtiva()" style="background: #10b981; color: #fff; border-color: #059669;">
                         🏁 Finalizar
@@ -1464,7 +1475,7 @@
                 buscarGeometriaRuasOSRM: function(coordsList, requestId) {
                     let url = `https://router.project-osrm.org/route/v1/driving/${coordsList}?overview=full&geometries=geojson`;
                     fetch(url).then(r => r.json()).then(data => {
-                        let coords = data.routes && data.routes[0] ? data.routes[0].geometry.coordinates : [];
+                        let coords = data.routes && data.routes[0] ? { coordinates: data.routes[0].geometry.coordinates, distance: data.routes[0].distance } : [];
                         window.receberGeometriaRuasOSRM(coords, true, requestId);
                     }).catch(() => {
                         window.receberGeometriaRuasOSRM([], false, requestId);
@@ -1522,6 +1533,10 @@
         let polylineBorder = null;
         let polylineBruta = null;
         let rotaGeometriaRuasCache = null; // Cache das curvas das ruas
+        let rotaGeometriaProximaCache = null;
+        let rotaGeometriaProximaConsulta = null;
+        let mostrarRotaCompleta = false;
+        let distanciaRestanteMetros = null;
         let rotaGeometriaConsulta = null;
         let ultimaAtualizacaoOrigem = 0;
         let otimizacaoPendente = null;
@@ -1619,7 +1634,8 @@
                 ultimaAtualizacaoOrigem = Date.now();
                 rotaGeometriaRuasCache = null;
                 rotaGeometriaConsulta = null;
-                if (rotaPlanejadaInfo) rotaPlanejadaInfo.distancia_m = 0;
+                distanciaRestanteMetros = null;
+                atualizarResumoQuilometragem();
                 if (map) renderizarMapa();
             }
 
@@ -1768,7 +1784,7 @@
                 return;
             }
 
-            if (badgeEl) badgeEl.innerText = `👉 #${proxIdx + 1}`;
+            if (badgeEl) badgeEl.innerText = `Ordem ${proxIdx + 1}`;
             if (addrEl) addrEl.innerText = proxParada.endereco || proxParada.destinatario || 'Endereço';
 
             let distStr = 'Próxima entrega';
@@ -1780,7 +1796,8 @@
                     distStr = `A ${distKm.toFixed(1)} km em linha reta`;
                 }
             }
-            if (distEl) distEl.innerText = distStr;
+            const numeroML = obterNumeroOriginal(proxParada);
+            if (distEl) distEl.innerText = `${numeroML ? 'ML #' + numeroML : 'ML: número indisponível'} · ${distStr}`;
         }
 
         // Tab Switching
@@ -1886,6 +1903,22 @@
             return pontos;
         }
 
+        function obterPontosProximaParada() {
+            const origem = rotaOrigem && rotaOrigem.lat && rotaOrigem.lng ? rotaOrigem : null;
+            const destino = rotaAtual.find(p => !p.finalizada) || rotaCasa;
+            return origem && destino && destino.lat && destino.lng ? [origem, destino] : [];
+        }
+
+        function alternarRotaCompleta() {
+            mostrarRotaCompleta = !mostrarRotaCompleta;
+            const btn = document.getElementById('btn-rota-completa');
+            if (btn) {
+                btn.textContent = mostrarRotaCompleta ? 'Ocultar rota completa' : 'Mostrar rota completa';
+                btn.setAttribute('aria-pressed', String(mostrarRotaCompleta));
+            }
+            renderizarMapa();
+        }
+
         function aplicarMetadadosParadas(paradas) {
             const total = paradas.length;
             paradas.forEach((p, idx) => {
@@ -1895,6 +1928,28 @@
                 else p.zona = "Porta-Malas (Zona 3)";
             });
             return paradas;
+        }
+
+        function obterNumeroOriginal(parada) {
+            const n = parada && parada.parada_original;
+            return n != null && Number.isInteger(Number(n)) && Number(n) > 0 ? Number(n) : null;
+        }
+
+        function atualizarResumoQuilometragem() {
+            const distanciaEl = document.getElementById('mapa-distancia-restante');
+            const economiaEl = document.getElementById('mapa-economia');
+            if (distanciaEl) distanciaEl.textContent = distanciaRestanteMetros != null && Number.isFinite(distanciaRestanteMetros)
+                ? `Restante${rotaCasa ? ' até casa' : ''}: ${(distanciaRestanteMetros / 1000).toFixed(1)} km`
+                : 'Restante: indisponível';
+            const info = rotaPlanejadaInfo;
+            const antes = info && info.distancia_original_m;
+            const depois = info && info.distancia_m;
+            if (economiaEl) {
+                const valido = antes != null && depois != null && Number.isFinite(Number(antes)) && Number.isFinite(Number(depois)) && Number(antes) >= Number(depois);
+                economiaEl.textContent = valido
+                    ? `Economia: ${((Number(antes) - Number(depois)) / 1000).toFixed(1)} km (${info.comparacao || 'ordem anterior'})`
+                    : 'Economia: indisponível';
+            }
         }
 
         // Otimizador Heurístico TSP (Nearest Neighbor + 2-Opt)
@@ -2041,7 +2096,7 @@
 
             // Se já temos as curvas reais em cache salvo na memória, usa imediatamente!
             if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
-                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
+                if (mostrarRotaCompleta) renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
                 return;
             }
 
@@ -2079,7 +2134,7 @@
                             .then(r => r.json())
                             .then(data => {
                                 if (data.routes && data.routes[0] && data.routes[0].geometry) {
-                                    let coords = data.routes[0].geometry.coordinates;
+                                    let coords = { coordinates: data.routes[0].geometry.coordinates, distance: data.routes[0].distance };
                                     window.receberGeometriaRuasOSRM(coords, true, coordsStr);
                                 } else {
                                     tentarUrl(idx + 1);
@@ -2092,21 +2147,69 @@
             }, respondeuNativo ? 3200 : 50);
         }
 
-        window.receberGeometriaRuasOSRM = function(coordsGeoJson, success, requestId) {
+        window.receberGeometriaRuasOSRM = function(resultado, success, requestId) {
+            if (requestId && requestId.startsWith('proxima:')) {
+                if (requestId !== rotaGeometriaProximaConsulta) return;
+                const coords = Array.isArray(resultado) ? resultado : resultado && resultado.coordinates;
+                if (success && Array.isArray(coords) && coords.length > 0) {
+                    rotaGeometriaProximaCache = coords.map(c => [c[1], c[0]]);
+                    if (!mostrarRotaCompleta) renderizarTrilhasRuas(rotaGeometriaProximaCache, true);
+                } else {
+                    rotaGeometriaProximaCache = null;
+                    if (!mostrarRotaCompleta) {
+                        renderizarTrilhasRuas(obterPontosProximaParada().map(p => [p.lat, p.lng]), false);
+                        showToast('Não foi possível carregar o trajeto até a próxima parada. Confira a internet.');
+                    }
+                }
+                return;
+            }
             if (requestId !== rotaGeometriaConsulta) return;
+            const coordsGeoJson = Array.isArray(resultado) ? resultado : resultado && resultado.coordinates;
             if (success && Array.isArray(coordsGeoJson) && coordsGeoJson.length > 0) {
+                distanciaRestanteMetros = resultado && !Array.isArray(resultado) && Number.isFinite(Number(resultado.distance)) && Number(resultado.distance) > 0 ? Number(resultado.distance) : null;
+                atualizarResumoQuilometragem();
                 // Inverte [lng, lat] para Leaflet [lat, lng]
                 rotaGeometriaRuasCache = coordsGeoJson.map(c => [c[1], c[0]]);
-                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
+                if (mostrarRotaCompleta) renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
                 salvarEstadoRotaAtivaNoBanco();
             } else if (!rotaGeometriaRuasCache) {
+                distanciaRestanteMetros = null;
+                atualizarResumoQuilometragem();
                 // Fallback offline estruturado em quarteirões (esquinas a 90 graus)
                 let pontosComCoords = obterSequenciaCompletaRota().filter(p => p.lat && p.lng);
                 let fallback = pontosComCoords.map(p => [p.lat, p.lng]);
-                renderizarTrilhasRuas(fallback, false);
-                showToast('Não foi possível carregar o trajeto pelas ruas. Confira a internet.');
+                if (mostrarRotaCompleta) {
+                    renderizarTrilhasRuas(fallback, false);
+                    showToast('Não foi possível carregar o trajeto pelas ruas. Confira a internet.');
+                }
             }
         };
+
+        function baixarGeometriaProximaParada() {
+            const pontos = obterPontosProximaParada();
+            if (pontos.length < 2) {
+                rotaGeometriaProximaConsulta = null;
+                rotaGeometriaProximaCache = null;
+                return;
+            }
+            const coords = pontos.map(p => `${p.lng},${p.lat}`).join(';');
+            const requestId = 'proxima:' + coords;
+            if (rotaGeometriaProximaConsulta === requestId) {
+                if (rotaGeometriaProximaCache && !mostrarRotaCompleta) renderizarTrilhasRuas(rotaGeometriaProximaCache, true);
+                return;
+            }
+            rotaGeometriaProximaConsulta = requestId;
+            rotaGeometriaProximaCache = null;
+            if (window.Android && window.Android.buscarGeometriaRuasOSRM) {
+                window.Android.buscarGeometriaRuasOSRM(coords, requestId);
+                return;
+            }
+            fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`)
+                .then(r => r.json()).then(data => {
+                    const rota = data.routes && data.routes[0];
+                    window.receberGeometriaRuasOSRM(rota ? { coordinates: rota.geometry.coordinates, distance: rota.distance } : [], !!rota, requestId);
+                }).catch(() => window.receberGeometriaRuasOSRM([], false, requestId));
+        }
 
         function renderizarTrilhasRuas(latlngs, isReal) {
             if (!map || !latlngs || latlngs.length < 2) return;
@@ -2137,11 +2240,8 @@
 
             const titleEl = document.getElementById('waze-route-title');
             if (titleEl) {
-                let titulo = isReal ? `Rota pelas ruas (${rotaAtual.filter(p => !p.finalizada).length} paradas)` : 'Traçado estimado, sem ruas';
-                if (rotaCasa) titulo += ' → 🏠 Casa';
-                if (rotaPlanejadaInfo && Number(rotaPlanejadaInfo.distancia_m) > 0) {
-                    titulo += ` • ${(Number(rotaPlanejadaInfo.distancia_m) / 1000).toFixed(1)} km`;
-                }
+                let titulo = isReal ? (mostrarRotaCompleta ? `Rota completa (${rotaAtual.filter(p => !p.finalizada).length} paradas)` : (rotaAtual.some(p => !p.finalizada) ? 'Até a próxima parada' : 'Volta para casa')) : 'Traçado estimado, sem ruas';
+                if (mostrarRotaCompleta && rotaCasa) titulo += ' → 🏠 Casa';
                 titleEl.innerText = titulo;
                 titleEl.style.color = isReal ? '#38bdf8' : '#facc15';
             }
@@ -2260,7 +2360,7 @@
             let conferidosDestaParada = parada.pacotes.filter(p => p.conferido).length;
 
             resultBox.className = 'bipe-result-card success';
-            document.getElementById('bipe-res-stop').innerText = `PARADA #${paradaIndex + 1}`;
+            document.getElementById('bipe-res-stop').innerText = `ORDEM ${paradaIndex + 1}${obterNumeroOriginal(parada) ? ' · ML #' + obterNumeroOriginal(parada) : ' · ML indisponível'}`;
             document.getElementById('bipe-res-zone').innerText = zonaNome;
             document.getElementById('bipe-res-zone').className = `zone-pill ${zonaClass}`;
             document.getElementById('bipe-res-recipient').innerText = parada.destinatario || "Cliente Mercado Livre";
@@ -2350,6 +2450,7 @@
         }
 
         function atualizarEstatisticas() {
+            atualizarResumoQuilometragem();
             let totalPacotes = 0;
             let conferidos = 0;
             let finalizadas = 0;
@@ -2410,6 +2511,7 @@
             p.finalizada = !p.finalizada;
             rotaGeometriaRuasCache = null;
             rotaGeometriaConsulta = null;
+            distanciaRestanteMetros = null;
             if (p.finalizada) {
                 p.finalizadaEm = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 if (p.pacotes) {
@@ -2450,6 +2552,9 @@
 
             let novoStatus = rotaAtivaMeta.status === "finalizada" ? "em_andamento" : "finalizada";
             let isFinalizando = (novoStatus === "finalizada");
+            rotaGeometriaRuasCache = null;
+            rotaGeometriaConsulta = null;
+            distanciaRestanteMetros = null;
 
             if (isFinalizando) {
                 rotaAtual.forEach(p => {
@@ -2519,7 +2624,8 @@
                         <div class="stop-card-top">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span class="stop-number">PARADA #${i + 1}</span>
+                                    <span class="stop-number">ORDEM ${i + 1}</span>
+                                    <span class="stop-original">${obterNumeroOriginal(p) ? 'Mercado Livre #' + obterNumeroOriginal(p) : 'Número ML indisponível'}</span>
                                     ${isEntregue ? `<span class="stop-delivered-badge">✅ ENTREGUE ${p.finalizadaEm ? '(' + p.finalizadaEm + ')' : ''}</span>` : ''}
                                 </div>
                                 <div class="recipient-name" style="margin-top: 2px;">${p.destinatario || 'Cliente Mercado Livre'}</div>
@@ -2598,7 +2704,7 @@
                 let cardHtml = `
                     <div class="card" style="margin-bottom: 6px; padding: 10px 12px; ${isEntregue ? 'border-left: 4px solid var(--emerald); background: rgba(16, 185, 129, 0.05);' : ''}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <b>#${i + 1} - ${p.destinatario || 'Cliente'}</b>
+                            <b>Ordem ${i + 1}${obterNumeroOriginal(p) ? ' · ML #' + obterNumeroOriginal(p) : ''} - ${p.destinatario || 'Cliente'}</b>
                             <div style="display: flex; gap: 4px; align-items: center;">
                                 ${isEntregue ? '<span class="stop-delivered-badge">✅ ENTREGUE</span>' : ''}
                                 <span style="font-size: 11px; color: var(--text-muted);">${p.pacotes ? p.pacotes.length : 0} pacote(s)</span>
@@ -2645,7 +2751,7 @@
         }
 
         // Custom Leaflet Pin Icon (Estilo Waze com etiqueta da rua!)
-        function criarPinCustomizado(p, numero, total, isFinalizada) {
+        function criarPinCustomizado(p, numero, total, isFinalizada, isProxima) {
             let ruaCurta = (p.endereco || p.destinatario || `Parada #${numero}`).split(',')[0].trim();
             if (ruaCurta.length > 22) ruaCurta = ruaCurta.substring(0, 20) + '..';
 
@@ -2666,7 +2772,7 @@
                         <div class="waze-pin-circle ${isFinalizada ? 'delivered' : ''}" style="background: ${bg}; color: ${textCol};">
                             <span>${isFinalizada ? '✓' : numero}</span>
                         </div>
-                        <div class="waze-pin-tag">${ruaCurta}</div>
+                        ${isProxima ? `<div class="waze-pin-tag">Próxima: ${ruaCurta}</div>` : ''}
                     </div>
                 `,
                 iconSize: [120, 28],
@@ -2694,6 +2800,7 @@
 
             let latlngs = [];
             let total = rotaAtual.length;
+            let proximaPendente = rotaAtual.findIndex(parada => !parada.finalizada);
 
             if (rotaOrigem && rotaOrigem.lat && rotaOrigem.lng) {
                 const origemPos = [rotaOrigem.lat, rotaOrigem.lng];
@@ -2704,6 +2811,7 @@
             }
 
             rotaAtual.forEach((p, i) => {
+                if (!mostrarRotaCompleta && i !== proximaPendente) return;
                 if (p.lat && p.lng) {
                     let pos = [p.lat, p.lng];
                     latlngs.push(pos);
@@ -2713,7 +2821,7 @@
                         <div style="color: #000; font-family: sans-serif; min-width: 190px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="font-weight: 800; font-size: 14px; color: ${isEntregue ? '#10b981' : '#2f81f7'};">
-                                    #${i + 1} - ${p.destinatario || 'Destinatário'}
+                                    Ordem ${i + 1}${obterNumeroOriginal(p) ? ' · ML #' + obterNumeroOriginal(p) : ' · ML indisponível'}
                                 </div>
                                 ${isEntregue ? '<span style="background: #10b981; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">ENTREGUE</span>' : ''}
                             </div>
@@ -2737,13 +2845,14 @@
                         </div>
                     `;
 
-                    let icon = criarPinCustomizado(p, i + 1, total, isEntregue);
-                    let m = L.marker(pos, { icon: icon }).addTo(map).bindPopup(popupContent);
+                    let isProxima = i === proximaPendente;
+                    let icon = criarPinCustomizado(p, i + 1, total, isEntregue, isProxima);
+                    let m = L.marker(pos, { icon: icon, zIndexOffset: isProxima ? 500 : 0 }).addTo(map).bindPopup(popupContent);
                     markers.push(m);
                 }
             });
 
-            if (rotaCasa && rotaCasa.lat && rotaCasa.lng) {
+            if (rotaCasa && rotaCasa.lat && rotaCasa.lng && (mostrarRotaCompleta || proximaPendente === -1)) {
                 const casaPos = [rotaCasa.lat, rotaCasa.lng];
                 latlngs.push(casaPos);
                 markers.push(L.marker(casaPos, { icon: criarIconeExtremo('🏠', '#16a34a'), zIndexOffset: 900 })
@@ -2751,15 +2860,18 @@
                     .bindPopup(`<b>🏠 Destino final</b><br>${rotaCasa.endereco || 'Casa'}`));
             }
 
-            // Se já tem traçado real das ruas em cache, desenha imediatamente!
-            if (rotaGeometriaRuasCache && rotaGeometriaRuasCache.length > 0) {
-                renderizarTrilhasRuas(rotaGeometriaRuasCache, true);
-            } else if (latlngs.length > 0) {
-                // Desenha linha inicial e busca ruas reais no OSRM
-                const pontos = obterSequenciaCompletaRota().filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]);
-                renderizarTrilhasRuas(pontos, false);
-                baixarGeometriaRuasReais();
+            const pontosExibidos = mostrarRotaCompleta ? obterSequenciaCompletaRota() : obterPontosProximaParada();
+            const cacheExibido = mostrarRotaCompleta ? rotaGeometriaRuasCache :
+                (rotaGeometriaProximaConsulta === 'proxima:' + pontosExibidos.map(p => `${p.lng},${p.lat}`).join(';') ? rotaGeometriaProximaCache : null);
+            if (cacheExibido && cacheExibido.length > 0) renderizarTrilhasRuas(cacheExibido, true);
+            else if (pontosExibidos.length >= 2) renderizarTrilhasRuas(pontosExibidos.map(p => [p.lat, p.lng]), false);
+            else {
+                if (polylineRuas) { map.removeLayer(polylineRuas); polylineRuas = null; }
+                if (polylineBorder) { map.removeLayer(polylineBorder); polylineBorder = null; }
             }
+            // A consulta completa também alimenta o total de quilômetros, mesmo em modo próxima parada.
+            baixarGeometriaRuasReais();
+            baixarGeometriaProximaParada();
 
             if (latlngs.length > 0 && !isSeguirCarroAtivo) {
                 map.fitBounds(L.latLngBounds(latlngs), { padding: [35, 35] });
@@ -2793,6 +2905,7 @@
                 origem: rotaOrigem,
                 casa: rotaCasa,
                 planejamento: rotaPlanejadaInfo,
+                distancia_restante_m: distanciaRestanteMetros,
                 geometria_ruas: rotaGeometriaRuasCache || [],
                 paradas: rotaAtual
             };
@@ -3022,13 +3135,16 @@
 
             // Restaura curvas das ruas salvas
             rotaGeometriaRuasCache = (rotaObj.geometria_ruas && rotaObj.geometria_ruas.length > 0) ? rotaObj.geometria_ruas : null;
+            distanciaRestanteMetros = typeof rotaObj.distancia_restante_m === 'number' && Number.isFinite(rotaObj.distancia_restante_m)
+                ? rotaObj.distancia_restante_m : null;
+            if (distanciaRestanteMetros == null) rotaGeometriaRuasCache = null;
             rotaGeometriaConsulta = null;
             otimizacaoPendente = null;
             if (carLatLng) {
                 rotaOrigem = { lat: carLatLng[0], lng: carLatLng[1], endereco: 'Sua localização atual', capturada_em: Date.now() };
                 ultimaAtualizacaoOrigem = Date.now();
                 rotaGeometriaRuasCache = null;
-                if (rotaPlanejadaInfo) rotaPlanejadaInfo.distancia_m = 0;
+                distanciaRestanteMetros = null;
             }
 
             pacotesBipados.clear();
@@ -3083,6 +3199,7 @@
                     rotaOrigem = null;
                     rotaCasa = null;
                     rotaPlanejadaInfo = null;
+                    distanciaRestanteMetros = null;
                     rotaGeometriaRuasCache = null;
                     document.getElementById('banner-rota-ativa').style.display = 'none';
                     renderizarParadas();
@@ -3122,6 +3239,7 @@
             rotaOrigem = { ...origem };
             rotaCasa = casa ? { ...casa } : null;
             rotaPlanejadaInfo = routeInfo && typeof routeInfo === 'object' ? { ...routeInfo } : null;
+            distanciaRestanteMetros = null;
             let indicePendente = 0;
             rotaBrutaOriginal = rotaAtual.map(p => p.finalizada ? { ...p } : { ...paradas[indicePendente++] });
             rotaAtual = aplicarMetadadosParadas(rotaBrutaOriginal.map(p => ({ ...p })));
@@ -3155,6 +3273,7 @@
             rotaOrigem = origemOpcional && origemOpcional.lat ? { ...origemOpcional } : null;
             rotaCasa = casaOpcional && casaOpcional.lat ? { ...casaOpcional } : null;
             rotaPlanejadaInfo = routeInfoOpcional && typeof routeInfoOpcional === 'object' ? { ...routeInfoOpcional } : null;
+            distanciaRestanteMetros = null;
             rotaBrutaOriginal = paradas.map(p => ({ ...p }));
             rotaAtual = (rotaOrigem && rotaCasa)
                 ? aplicarMetadadosParadas(rotaBrutaOriginal.map(p => ({ ...p })))

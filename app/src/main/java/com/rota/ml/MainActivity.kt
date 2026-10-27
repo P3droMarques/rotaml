@@ -1295,6 +1295,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val enderecosNaoLocalizados = mutableListOf<String>()
         for (i in 0 until paradas.length()) {
             val p = paradas.getJSONObject(i)
+            if (!p.has("parada_original")) {
+                val numeroOriginal = p.optInt("parada_num", 0)
+                p.put("parada_original", if (numeroOriginal > 0) numeroOriginal else JSONObject.NULL)
+            }
             val endereco = p.optString("endereco", "")
             val bairro = p.optString("bairro", "")
             val cep = p.optString("cep", "")
@@ -1362,6 +1366,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 .put("fonte", "OSRM matriz de ruas")
                 .put("distancia_m", planoPorRuas.distanciaMetros)
                 .put("duracao_s", planoPorRuas.duracaoSegundos)
+                .put("distancia_original_m", if (planoPorRuas.distanciaOriginalMetros.isFinite()) planoPorRuas.distanciaOriginalMetros else JSONObject.NULL)
+                .put("comparacao", "ordem importada")
         }
 
         // Mantém um segundo fallback de ordenação viária caso o servidor de
@@ -1601,12 +1607,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         val json = JSONObject(respStr)
                         val routes = json.optJSONArray("routes")
                         if (routes != null && routes.length() > 0) {
-                            val geom = routes.getJSONObject(0).optJSONObject("geometry")
+                            val rota = routes.getJSONObject(0)
+                            val geom = rota.optJSONObject("geometry")
                             val coords = geom?.optJSONArray("coordinates")
                             if (coords != null && coords.length() > 0) {
                                 Log.d("OSRM", "Geometria completa obtida de $baseUrl: ${coords.length()} coordenadas")
                                 withContext(Dispatchers.Main) {
-                                    callback?.invoke(true, coords.toString())
+                                    callback?.invoke(true, JSONObject().put("coordinates", coords).put("distance", rota.optDouble("distance", 0.0)).toString())
                                 }
                                 return@launch
                             }
@@ -1623,10 +1630,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 try {
                     val accumulatedCoords = JSONArray()
                     var todosOsTrechos = true
+                    var distanciaTotal = 0.0
 
                     for (i in 0 until pontos.size - 1) {
                         val legQuery = "${pontos[i]};${pontos[i + 1]}"
                         var legCoords: JSONArray? = null
+                        var distanciaTrecho = Double.NaN
 
                         for (baseUrl in routingServers) {
                             try {
@@ -1640,7 +1649,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                                     val json = JSONObject(resp.body?.string() ?: "{}")
                                     val routes = json.optJSONArray("routes")
                                     if (routes != null && routes.length() > 0) {
-                                        legCoords = routes.getJSONObject(0).optJSONObject("geometry")?.optJSONArray("coordinates")
+                                        val rota = routes.getJSONObject(0)
+                                        legCoords = rota.optJSONObject("geometry")?.optJSONArray("coordinates")
+                                        distanciaTrecho = rota.optDouble("distance", Double.NaN)
                                         if (legCoords != null && legCoords.length() > 0) {
                                             break
                                         }
@@ -1650,6 +1661,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         }
 
                         if (legCoords != null && legCoords.length() > 0) {
+                            if (!distanciaTrecho.isFinite()) { todosOsTrechos = false; break }
+                            distanciaTotal += distanciaTrecho
                             val startIdx = if (accumulatedCoords.length() > 0) 1 else 0
                             for (k in startIdx until legCoords.length()) {
                                 accumulatedCoords.put(legCoords.getJSONArray(k))
@@ -1663,7 +1676,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     if (todosOsTrechos && accumulatedCoords.length() > 0) {
                         Log.d("OSRM", "Geometria segmentada gerada: ${accumulatedCoords.length()} pontos")
                         withContext(Dispatchers.Main) {
-                            callback?.invoke(true, accumulatedCoords.toString())
+                            callback?.invoke(true, JSONObject().put("coordinates", accumulatedCoords).put("distance", distanciaTotal).toString())
                         }
                         return@launch
                     }
@@ -1756,6 +1769,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         .put("distancia_m", plano.distanciaMetros)
                         .put("duracao_s", plano.duracaoSegundos)
                         .put("distancia_original_m", if (plano.distanciaOriginalMetros.isFinite()) plano.distanciaOriginalMetros else JSONObject.NULL)
+                        .put("comparacao", "ordem anterior")
 
                     withContext(Dispatchers.Main) {
                         binding.webView.evaluateJavascript(
