@@ -1214,31 +1214,23 @@
                 <button onclick="fecharModalCriarRota()" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-                Escolha como deseja criar a rota. Ela será gravada no Firebase e salva offline no dispositivo:
+                Leia uma rota diretamente do app Envios Extra ou selecione os prints da rota. Não há rotas de exemplo neste fluxo.
             </p>
+
+            <button class="test-btn primary" onclick="fecharModalCriarRota(); acionarLeituraTelaAoVivo();" style="border-color: var(--ml-yellow);">
+                <div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">⚡ 1. Ler tela ao vivo</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Leia a tela do aplicativo Envios Extra enquanto rola as paradas</div>
+                </div>
+                <span style="font-size: 18px;">📱</span>
+            </button>
 
             <button class="test-btn highlight" onclick="fecharModalCriarRota(); acionarOcrGaleria();" style="border-color: #58a6ff;">
                 <div>
-                    <div style="font-size: 14px; font-weight: 800; color: #58a6ff;">📷 1. Ler Fotos da Galeria (OCR)</div>
+                    <div style="font-size: 14px; font-weight: 800; color: #58a6ff;">📷 2. Ler fotos da galeria</div>
                     <div style="font-size: 11px; color: var(--text-muted);">Extrai endereços de prints do aplicativo Envios Extra</div>
                 </div>
                 <span style="font-size: 18px;">🖼️</span>
-            </button>
-
-            <button class="test-btn primary" onclick="fecharModalCriarRota(); criarRotaReal11Paradas();" style="border-color: var(--ml-yellow);">
-                <div>
-                    <div style="font-size: 14px; font-weight: 800; color: var(--ml-yellow);">⚡ 2. Rota Envios Extra Real (11 Paradas)</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Campinas (Guanabara/Taquaral/Cambuí) - 62 pacotes</div>
-                </div>
-                <span style="font-size: 18px;">📦</span>
-            </button>
-
-            <button class="test-btn" onclick="fecharModalCriarRota(); criarRotaReal40Paradas();">
-                <div>
-                    <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">🗺️ 3. Rota Grande Campinas (40 Paradas)</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">40 paradas distribuídas na região de Campinas</div>
-                </div>
-                <span style="font-size: 18px;">📍</span>
             </button>
 
             <button class="btn-secondary" style="padding: 10px; margin-top: 6px; width: 100%;" onclick="fecharModalCriarRota()">
@@ -1278,6 +1270,14 @@
                 window.Android.abrirSeletorGaleria();
             } else {
                 showToast("Seletor de fotos disponível no aplicativo Android.");
+            }
+        }
+
+        function acionarLeituraTelaAoVivo() {
+            if (window.Android && window.Android.iniciarLeituraTelaAoVivo) {
+                window.Android.iniciarLeituraTelaAoVivo();
+            } else {
+                showToast("Leitura ao vivo disponível no aplicativo Android.");
             }
         }
 
@@ -2883,270 +2883,6 @@
             salvarEstadoRotaAtivaNoBanco();
             baixarGeometriaRuasReais();
         };
-
-        // Datasets Prontos
-        function obter11ParadasEnviosExtra() {
-            return [
-                {
-                    parada_num: 1,
-                    destinatario: "Loja Academia Aquarius",
-                    endereco: "Rua Dona Maria Umbelina Couto 189",
-                    complemento: "Com horário comercial",
-                    bairro: "Guanabara",
-                    cidade: "Campinas",
-                    cep: "13076011",
-                    lat: -22.8872,
-                    lng: -47.0658,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: [
-                        { id: "NX215_1", final: "215_1", etiqueta: "#NX215_1", conferido: false }
-                    ]
-                },
-                {
-                    parada_num: 2,
-                    destinatario: "Condomínio Residencial Parque Itaici",
-                    endereco: "Rua Tiradentes 1025",
-                    complemento: "",
-                    bairro: "Guanabara",
-                    cidade: "Campinas",
-                    cep: "13023191",
-                    lat: -22.8912,
-                    lng: -47.0664,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 8 }, (_, i) => ({
-                        id: `NX215_2_${i + 1}`,
-                        final: "215_2",
-                        etiqueta: `#NX215_2 (${i + 1}/8)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 3,
-                    destinatario: "Condomínio Vox Residencial",
-                    endereco: "Rua Alberto Cerqueira Lima 29",
-                    complemento: "",
-                    bairro: "Taquaral",
-                    cidade: "Campinas",
-                    cep: "13076010",
-                    lat: -22.8821,
-                    lng: -47.0573,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 17 }, (_, i) => ({
-                        id: `NX215_3_${i + 1}`,
-                        final: "215_3",
-                        etiqueta: `#NX215_3 (${i + 1}/17)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 4,
-                    destinatario: "Cliente Taquaral",
-                    endereco: "Rua Lotário Novaes 325",
-                    complemento: "",
-                    bairro: "Taquaral",
-                    cidade: "Campinas",
-                    cep: "13076150",
-                    lat: -22.8804,
-                    lng: -47.0601,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 2 }, (_, i) => ({
-                        id: `NX215_4_${i + 1}`,
-                        final: "215_4",
-                        etiqueta: `#NX215_4 (${i + 1}/2)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 5,
-                    destinatario: "Condomínio Art Vitta",
-                    endereco: "Rua Doutor Mário Natividade 1080",
-                    complemento: "",
-                    bairro: "Taquaral",
-                    cidade: "Campinas",
-                    cep: "13076112",
-                    lat: -22.8842,
-                    lng: -47.0544,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 9 }, (_, i) => ({
-                        id: `NX215_5_${i + 1}`,
-                        final: "215_5",
-                        etiqueta: `#NX215_5 (${i + 1}/9)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 6,
-                    destinatario: "Comércio Guanabara",
-                    endereco: "Av. Barão de Itapura 2200",
-                    complemento: "Comércio",
-                    bairro: "Guanabara",
-                    cidade: "Campinas",
-                    cep: "13020432",
-                    lat: -22.8890,
-                    lng: -47.0630,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 11 }, (_, i) => ({
-                        id: `NX215_6_${i + 1}`,
-                        final: "215_6",
-                        etiqueta: `#NX215_6 (${i + 1}/11)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 7,
-                    destinatario: "Condomínio Horizon Residence",
-                    endereco: "Rua São Salvador 220",
-                    complemento: "",
-                    bairro: "Taquaral",
-                    cidade: "Campinas",
-                    cep: "13076904",
-                    lat: -22.8835,
-                    lng: -47.0562,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 7 }, (_, i) => ({
-                        id: `NX215_7_${i + 1}`,
-                        final: "215_7",
-                        etiqueta: `#NX215_7 (${i + 1}/7)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 8,
-                    destinatario: "Prédio Aquarius I",
-                    endereco: "Rua Doutor Plínio Barreto 107",
-                    complemento: "",
-                    bairro: "Guanabara",
-                    cidade: "Campinas",
-                    cep: "13076590",
-                    lat: -22.8856,
-                    lng: -47.0618,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: Array.from({ length: 5 }, (_, i) => ({
-                        id: `NX215_8_${i + 1}`,
-                        final: "215_8",
-                        etiqueta: `#NX215_8 (${i + 1}/5)`,
-                        conferido: false
-                    }))
-                },
-                {
-                    parada_num: 9,
-                    destinatario: "Residencial Vila Nova",
-                    endereco: "Rua Carolina Florence 950",
-                    complemento: "",
-                    bairro: "Vila Nova",
-                    cidade: "Campinas",
-                    cep: "13073076",
-                    lat: -22.8792,
-                    lng: -47.0728,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: [
-                        { id: "NX215_9", final: "215_9", etiqueta: "#NX215_9", conferido: false }
-                    ]
-                },
-                {
-                    parada_num: 10,
-                    destinatario: "Cliente Vila Iza",
-                    endereco: "Rua Paulo José Vilac 128",
-                    complemento: "",
-                    bairro: "Vila Iza",
-                    cidade: "Campinas",
-                    cep: "13076690",
-                    lat: -22.8848,
-                    lng: -47.0588,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: [
-                        { id: "NX215_10", final: "215_10", etiqueta: "#NX215_10", conferido: false }
-                    ]
-                },
-                {
-                    parada_num: 11,
-                    destinatario: "Prédio Sesmarias",
-                    endereco: "Avenida José de Sousa Campos 2303",
-                    complemento: "",
-                    bairro: "Cambuí",
-                    cidade: "Campinas",
-                    cep: "13025320",
-                    lat: -22.8953,
-                    lng: -47.0487,
-                    finalizada: false,
-                    finalizadaEm: null,
-                    pacotes: [
-                        { id: "NX215_11", final: "215_11", etiqueta: "#NX215_11", conferido: false }
-                    ]
-                }
-            ];
-        }
-
-        function criarRotaReal11Paradas() {
-            let agora = new Date();
-            let dataHoraStr = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            let titulo = `Envios Extra Taquaral/Guanabara - ${dataHoraStr}`;
-            let paradas = obter11ParadasEnviosExtra();
-            window.carregarRota(paradas, "rota_extra_" + agora.getTime(), titulo);
-        }
-
-        function obter40ParadasCampinas() {
-            return [
-                { parada_num: 1, destinatario: "Valdineia Bandeira Mendes", endereco: "Rua Umberto Vetoratto, 170", complemento: "Fundos", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060012", lat: -22.9234, lng: -47.1123, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806075", final: "06075", etiqueta: "#NX394_01", conferido: false }] },
-                { parada_num: 2, destinatario: "Marcos Aurelio Silva", endereco: "Rua Visconde de Taunay, 340", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023200", lat: -22.8940, lng: -47.0650, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806076", final: "06076", etiqueta: "#NX394_02", conferido: false }] },
-                { parada_num: 3, destinatario: "Carlos Eduardo Silva", endereco: "Av. John Boyd Dunlop, 1500", complemento: "Apto 32", bairro: "Jardim Ipaussurama", cidade: "Campinas", cep: "13060803", lat: -22.9198, lng: -47.1089, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806077", final: "06077", etiqueta: "#NX394_03", conferido: false }] },
-                { parada_num: 4, destinatario: "Patricia Souza Lima", endereco: "Rua Carolina Florence, 920", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073076", lat: -22.8790, lng: -47.0730, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806078", final: "06078", etiqueta: "#NX394_04", conferido: false }] },
-                { parada_num: 5, destinatario: "Sylvio Moro Junior", endereco: "Rua Sylvio Moro, 85", complemento: "Casa", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060020", lat: -22.9242, lng: -47.1135, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806079", final: "06079", etiqueta: "#NX394_05", conferido: false }] },
-                { parada_num: 6, destinatario: "Lucas Prado Ferreira", endereco: "Rua Maria Monteiro, 820", complemento: "Apto 101", bairro: "Cambuí", cidade: "Campinas", cep: "13025151", lat: -22.8975, lng: -47.0505, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806080", final: "06080", etiqueta: "#NX394_06", conferido: false }] },
-                { parada_num: 7, destinatario: "José dos Reis Santos", endereco: "Rua José dos Reis, 210", complemento: "", bairro: "Jardim Ipiranga", cidade: "Campinas", cep: "13060030", lat: -22.9251, lng: -47.1118, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806081", final: "06081", etiqueta: "#NX394_07", conferido: false }] },
-                { parada_num: 8, destinatario: "Roberto Almeida Junior", endereco: "Rua Barão de Jaguara, 890", complemento: "Sala 12", bairro: "Centro", cidade: "Campinas", cep: "13015001", lat: -22.9056, lng: -47.0608, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806082", final: "06082", etiqueta: "#NX394_08", conferido: false }] },
-                { parada_num: 9, destinatario: "Amanda Cristina Rocha", endereco: "Rua Piracicaba, 340", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050510", lat: -22.9280, lng: -47.1050, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806083", final: "06083", etiqueta: "#NX394_09", conferido: false }] },
-                { parada_num: 10, destinatario: "Fernando Henrique Lima", endereco: "Av. Heitor Penteado, 1500", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13087000", lat: -22.8750, lng: -47.0530, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806084", final: "06084", etiqueta: "#NX394_10", conferido: false }] },
-                { parada_num: 11, destinatario: "Renata Oliveira Castro", endereco: "Rua Americana, 125", complemento: "Casa 2", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050520", lat: -22.9295, lng: -47.1030, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806085", final: "06085", etiqueta: "#NX394_11", conferido: false }] },
-                { parada_num: 12, destinatario: "Thiago Goncalves Dias", endereco: "Rua Proença, 830", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026300", lat: -22.9110, lng: -47.0500, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806086", final: "06086", etiqueta: "#NX394_12", conferido: false }] },
-                { parada_num: 13, destinatario: "Bruna Martins Vieira", endereco: "Rua Limeira, 450", complemento: "", bairro: "Jd. Novo Campos Elíseos", cidade: "Campinas", cep: "13050530", lat: -22.9310, lng: -47.1010, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806087", final: "06087", etiqueta: "#NX394_13", conferido: false }] },
-                { parada_num: 14, destinatario: "Gustavo Barbosa Reis", endereco: "Rua Coronel Quirino, 1550", complemento: "", bairro: "Cambuí", cidade: "Campinas", cep: "13025002", lat: -22.8990, lng: -47.0520, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806088", final: "06088", etiqueta: "#NX394_14", conferido: false }] },
-                { parada_num: 15, destinatario: "Rodrigo Sanches Alves", endereco: "Av. das Amoreiras, 2100", complemento: "Comércio", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036225", lat: -22.9220, lng: -47.0850, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806089", final: "06089", etiqueta: "#NX394_15", conferido: false }] },
-                { parada_num: 16, destinatario: "Mariana Santos Oliveira", endereco: "Rua José Ferreira de Camargo, 420", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092105", lat: -22.8985, lng: -47.0456, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806090", final: "06090", etiqueta: "#NX394_16", conferido: false }] },
-                { parada_num: 17, destinatario: "Felipe Nogueira Dias", endereco: "Rua Thomaz Alva Edison, 310", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036020", lat: -22.9240, lng: -47.0830, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806091", final: "06091", etiqueta: "#NX394_17", conferido: false }] },
-                { parada_num: 18, destinatario: "Claudia Regina Soares", endereco: "Rua General Osório, 1200", complemento: "Edifício Central", bairro: "Centro", cidade: "Campinas", cep: "13010111", lat: -22.9040, lng: -47.0585, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806092", final: "06092", etiqueta: "#NX394_18", conferido: false }] },
-                { parada_num: 19, destinatario: "Diego Henrique Pires", endereco: "Rua Pereira Barreto, 180", complemento: "", bairro: "Parque Industrial", cidade: "Campinas", cep: "13036050", lat: -22.9255, lng: -47.0815, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806093", final: "06093", etiqueta: "#NX394_19", conferido: false }] },
-                { parada_num: 20, destinatario: "Luciana Morais Costa", endereco: "Av. Barão de Itapura, 2100", complemento: "Sala 4", bairro: "Guanabara", cidade: "Campinas", cep: "13020432", lat: -22.8890, lng: -47.0630, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806094", final: "06094", etiqueta: "#NX394_20", conferido: false }] },
-                { parada_num: 21, destinatario: "Marcelo Tavares Brito", endereco: "Rua Dr. Carlos de Campos, 520", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035210", lat: -22.9150, lng: -47.0720, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806095", final: "06095", etiqueta: "#NX394_21", conferido: false }] },
-                { parada_num: 22, destinatario: "Vanessa Correia Ramos", endereco: "Av. Brasil, 1350", complemento: "", bairro: "Jardim Guanabara", cidade: "Campinas", cep: "13070178", lat: -22.8870, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806096", final: "06096", etiqueta: "#NX394_22", conferido: false }] },
-                { parada_num: 23, destinatario: "Eduardo Macedo Fontes", endereco: "Rua Francisco Teodoro, 620", complemento: "", bairro: "Vila Industrial", cidade: "Campinas", cep: "13035300", lat: -22.9125, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806097", final: "06097", etiqueta: "#NX394_23", conferido: false }] },
-                { parada_num: 24, destinatario: "Aline Cristina Duarte", endereco: "Rua Tiradentes, 750", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023191", lat: -22.8910, lng: -47.0660, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806098", final: "06098", etiqueta: "#NX394_24", conferido: false }] },
-                { parada_num: 25, destinatario: "Sergio Murilo Camargo", endereco: "Rua Barreto Leme, 1600", complemento: "Apto 42", bairro: "Centro", cidade: "Campinas", cep: "13010201", lat: -22.9020, lng: -47.0620, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806099", final: "06099", etiqueta: "#NX394_25", conferido: false }] },
-                { parada_num: 26, destinatario: "Juliana Mendes Garcia", endereco: "Rua Paula Bueno, 600", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076061", lat: -22.8860, lng: -47.0540, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806100", final: "06100", etiqueta: "#NX394_26", conferido: false }] },
-                { parada_num: 27, destinatario: "Fabio Henrique Viana", endereco: "Rua Sacramento, 450", complemento: "", bairro: "Centro", cidade: "Campinas", cep: "13010210", lat: -22.9035, lng: -47.0640, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806101", final: "06101", etiqueta: "#NX394_27", conferido: false }] },
-                { parada_num: 28, destinatario: "Daniela Antunes Prado", endereco: "Rua Buarque de Macedo, 1200", complemento: "", bairro: "Vila Nova", cidade: "Campinas", cep: "13073055", lat: -22.8800, lng: -47.0690, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806102", final: "06102", etiqueta: "#NX394_28", conferido: false }] },
-                { parada_num: 29, destinatario: "Igor Vasconcelos Lins", endereco: "Rua Saldanha Marinho, 980", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13013081", lat: -22.9000, lng: -47.0680, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806103", final: "06103", etiqueta: "#NX394_29", conferido: false }] },
-                { parada_num: 30, destinatario: "Camila Ribeiro Pinto", endereco: "Av. Dr. Hermas Braga, 700", complemento: "", bairro: "Nova Campinas", cidade: "Campinas", cep: "13092130", lat: -22.8960, lng: -47.0430, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806104", final: "06104", etiqueta: "#NX394_30", conferido: false }] },
-                { parada_num: 31, destinatario: "Pedro Paulo Guedes", endereco: "Rua Culto à Ciência, 210", complemento: "", bairro: "Botafogo", cidade: "Campinas", cep: "13020060", lat: -22.8970, lng: -47.0680, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806105", final: "06105", etiqueta: "#NX394_31", conferido: false }] },
-                { parada_num: 32, destinatario: "Tatiane Cristina Neves", endereco: "Rua Santo Antonio, 240", complemento: "", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041350", lat: -22.9180, lng: -47.0550, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806106", final: "06106", etiqueta: "#NX394_32", conferido: false }] },
-                { parada_num: 33, destinatario: "Vitor Hugo Silveira", endereco: "Rua Barão de Atibaia, 560", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13023010", lat: -22.8930, lng: -47.0670, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806107", final: "06107", etiqueta: "#NX394_33", conferido: false }] },
-                { parada_num: 34, destinatario: "Priscila Valente Cruz", endereco: "Rua Abolição, 1100", complemento: "Fundos", bairro: "Ponte Preta", cidade: "Campinas", cep: "13041445", lat: -22.9210, lng: -47.0520, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806108", final: "06108", etiqueta: "#NX394_34", conferido: false }] },
-                { parada_num: 35, destinatario: "Alexandre Gusmao Paz", endereco: "Rua Frei Manoel da Ressurreição, 670", complemento: "", bairro: "Guanabara", cidade: "Campinas", cep: "13073221", lat: -22.8850, lng: -47.0670, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806109", final: "06109", etiqueta: "#NX394_35", conferido: false }] },
-                { parada_num: 36, destinatario: "Sabrina Leite Fagundes", endereco: "Rua Eng. Augusto de Figueiredo, 500", complemento: "", bairro: "Swift", cidade: "Campinas", cep: "13045503", lat: -22.9300, lng: -47.0450, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806110", final: "06110", etiqueta: "#NX394_36", conferido: false }] },
-                { parada_num: 37, destinatario: "Arthur Moura Carvalho", endereco: "Rua Dr. Buarque de Macedo, 450", complemento: "", bairro: "Jardim Brasil", cidade: "Campinas", cep: "13073010", lat: -22.8830, lng: -47.0700, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806111", final: "06111", etiqueta: "#NX394_37", conferido: false }] },
-                { parada_num: 38, destinatario: "Leticia Ferreira Brandao", endereco: "Av. Princesa D'Oeste, 1400", complemento: "", bairro: "Jardim Proença", cidade: "Campinas", cep: "13100040", lat: -22.9090, lng: -47.0420, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806112", final: "06112", etiqueta: "#NX394_38", conferido: false }] },
-                { parada_num: 39, destinatario: "Rogerio Ceni Moreira", endereco: "Rua Dr. Armando Sales de Oliveira, 800", complemento: "", bairro: "Taquaral", cidade: "Campinas", cep: "13076015", lat: -22.8820, lng: -47.0580, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806113", final: "06113", etiqueta: "#NX394_39", conferido: false }] },
-                { parada_num: 40, destinatario: "Helena Beatriz Guimaraes", endereco: "Rua Uruguaiana, 350", complemento: "", bairro: "Bosque", cidade: "Campinas", cep: "13026001", lat: -22.9080, lng: -47.0540, finalizada: false, finalizadaEm: null, pacotes: [{ id: "48314806114", final: "06114", etiqueta: "#NX394_40", conferido: false }] }
-            ];
-        }
-
-        function criarRotaReal40Paradas() {
-            let agora = new Date();
-            let dataHoraStr = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            let titulo = `Campinas Completa (40 Paradas) - ${dataHoraStr}`;
-            let paradas = obter40ParadasCampinas();
-            window.carregarRota(paradas, "rota_campinas_" + agora.getTime(), titulo);
-        }
 
         // DOM Ready
         window.addEventListener('DOMContentLoaded', () => {

@@ -53,6 +53,14 @@ class LeitorEnviosService : AccessibilityService() {
     private var btnOverlayConcluir: Button? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ultimoTamanhoParadas = 0
+    private var ocrEmAndamento = false
+    private val capturaOcrRunnable = object : Runnable {
+        override fun run() {
+            if (!capturando) return
+            executarOcrDaTelaAtual(silencioso = true)
+            mainHandler.postDelayed(this, 1400L)
+        }
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -78,10 +86,7 @@ class LeitorEnviosService : AccessibilityService() {
         // 1. Extrai texto dos registros do evento
         try {
             event.text.forEach { charSeq ->
-                val s = charSeq?.toString()?.trim() ?: ""
-                if (s.length >= 2) {
-                    textosCapturados.add(s)
-                }
+                adicionarTextoCapturado(charSeq?.toString())
             }
         } catch (_: Exception) {}
 
@@ -126,24 +131,25 @@ class LeitorEnviosService : AccessibilityService() {
         if (node == null) return
 
         try {
-            node.text?.let {
-                val s = it.toString().trim()
-                if (s.length >= 2) {
-                    textosCapturados.add(s)
-                }
-            }
-
-            node.contentDescription?.let {
-                val s = it.toString().trim()
-                if (s.length >= 2) {
-                    textosCapturados.add(s)
-                }
-            }
+            adicionarTextoCapturado(node.text?.toString())
+            adicionarTextoCapturado(node.contentDescription?.toString())
 
             for (i in 0 until node.childCount) {
                 extrairTextosRecursivo(node.getChild(i))
             }
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Nós de acessibilidade frequentemente entregam um cartão inteiro em uma
+     * única string, com quebras de linha. O parser trabalha por linhas, então
+     * normalizamos aqui antes de acumular o texto de várias rolagens.
+     */
+    private fun adicionarTextoCapturado(texto: String?) {
+        texto?.split(Regex("\\r?\\n"))?.forEach { parte ->
+            val linha = parte.trim()
+            if (linha.length >= 2) textosCapturados.add(linha)
+        }
     }
 
     private fun processarParadasEmTempoReal() {
@@ -176,11 +182,17 @@ class LeitorEnviosService : AccessibilityService() {
         ultimoTamanhoParadas = 0
         mainHandler.post {
             mostrarOverlay()
+            // A lista do Envios Extra é virtualizada e pode não expor todos os
+            // textos para a acessibilidade. OCR periódico lê o que realmente
+            // está visível, inclusive depois de cada rolagem.
+            mainHandler.removeCallbacks(capturaOcrRunnable)
+            mainHandler.postDelayed(capturaOcrRunnable, 900L)
         }
     }
 
     fun pararCapturaEFecharOverlay() {
         capturando = false
+        mainHandler.removeCallbacks(capturaOcrRunnable)
         mainHandler.post {
             removerOverlay()
         }
@@ -259,7 +271,7 @@ class LeitorEnviosService : AccessibilityService() {
                 }
                 layoutParams = lp
                 setOnClickListener {
-                    executarOcrDaTelaAtual()
+                    executarOcrDaTelaAtual(silencioso = false)
                 }
             }
             container.addView(btnOcr)
@@ -337,9 +349,11 @@ class LeitorEnviosService : AccessibilityService() {
     }
 
     // Executa OCR da tela através da API nativa de captura de tela de acessibilidade do Android 11+
-    private fun executarOcrDaTelaAtual() {
+    private fun executarOcrDaTelaAtual(silencioso: Boolean) {
+        if (ocrEmAndamento) return
+        ocrEmAndamento = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            txtOverlayStatus?.text = "⚡ Lendo texto da tela..."
+            if (!silencioso) txtOverlayStatus?.text = "⚡ Lendo texto da tela..."
             try {
                 takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
                     override fun onSuccess(screenshotResult: ScreenshotResult) {
@@ -352,18 +366,22 @@ class LeitorEnviosService : AccessibilityService() {
                         if (copyBitmap != null) {
                             processarBitmapComMlKit(copyBitmap)
                         } else {
+                            ocrEmAndamento = false
                             txtOverlayStatus?.text = "⚡ Erro ao ler tela"
                         }
                     }
 
                     override fun onFailure(errorCode: Int) {
+                        ocrEmAndamento = false
                         txtOverlayStatus?.text = "⚡ Falha na captura ($errorCode)"
                     }
                 })
             } catch (e: Exception) {
+                ocrEmAndamento = false
                 txtOverlayStatus?.text = "⚡ Erro OCR: ${e.message}"
             }
         } else {
+            ocrEmAndamento = false
             txtOverlayStatus?.text = "⚡ Use a opção 🖼️ Ler Foto no app"
         }
     }
@@ -376,18 +394,18 @@ class LeitorEnviosService : AccessibilityService() {
                 .addOnSuccessListener { visionText ->
                     for (block in visionText.textBlocks) {
                         for (line in block.lines) {
-                            val s = line.text.trim()
-                            if (s.length >= 2) {
-                                textosCapturados.add(s)
-                            }
+                            adicionarTextoCapturado(line.text)
                         }
                     }
+                    ocrEmAndamento = false
                     processarParadasEmTempoReal()
                 }
                 .addOnFailureListener { e ->
+                    ocrEmAndamento = false
                     txtOverlayStatus?.text = "⚡ Erro no OCR: ${e.message}"
                 }
         } catch (e: Exception) {
+            ocrEmAndamento = false
             Log.e("LeitorEnviosService", "Erro processando OCR", e)
         }
     }
@@ -428,6 +446,7 @@ class LeitorEnviosService : AccessibilityService() {
     override fun onDestroy() {
         isRunning = false
         capturando = false
+        mainHandler.removeCallbacks(capturaOcrRunnable)
         instance = null
         removerOverlay()
         super.onDestroy()

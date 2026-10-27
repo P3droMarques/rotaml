@@ -352,7 +352,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
             binding.btnLer.text = "⏹ Lendo (0)..."
             binding.btnLer.setTextColor(Color.parseColor("#EF4444"))
-            Toast.makeText(this, "Vá para o app Envios Extra e role a lista de paradas!\nO botão flutuante amarelo mostrará as paradas lidas.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Abra o app Envios Extra e role a lista devagar. A tela visível será lida automaticamente.", Toast.LENGTH_LONG).show()
         } else {
             LeitorEnviosService.instance?.pararCapturaEFecharOverlay() ?: run {
                 LeitorEnviosService.capturando = false
@@ -373,6 +373,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun processarImagensGaleria(uris: List<Uri>) {
+        // Uma nova rota deve começar somente pelas fotos escolhidas agora;
+        // nunca misture o resultado de uma captura anterior.
+        LeitorEnviosService.limpar()
         binding.progressBar.visibility = View.VISIBLE
         Toast.makeText(this, "Lendo ${uris.size} foto(s) com IA (OCR)...", Toast.LENGTH_SHORT).show()
 
@@ -1410,6 +1413,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         fun abrirSeletorGaleria() {
             runOnUiThread {
                 this@MainActivity.abrirSeletorGaleria()
+            }
+        }
+
+        @JavascriptInterface
+        fun iniciarLeituraTelaAoVivo() {
+            runOnUiThread {
+                this@MainActivity.toggleCapturaAoVivo()
             }
         }
 

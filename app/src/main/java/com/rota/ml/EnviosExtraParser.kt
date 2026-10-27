@@ -68,6 +68,7 @@ object EnviosExtraParser {
     private val UNIDADES_PATTERN = Pattern.compile("Entrega\\s+(\\d+)\\s+unidades?", Pattern.CASE_INSENSITIVE)
     private val JANELA_PATTERN = Pattern.compile("(\\d{1,2}:\\d{2}\\s*h?\\s*a\\s*\\d{1,2}:\\d{2}\\s*h?)", Pattern.CASE_INSENSITIVE)
     private val NUMERO_PARADA_PATTERN = Pattern.compile("^([1-9]\\d{0,2})$")
+    private val NUMERO_ENDERECO_SEPARADO_PATTERN = Pattern.compile("^(\\d{2,5})(?:\\s*[✓✔✿✾❀].*)?$")
     private val ID_NUMERICO_PATTERN = Pattern.compile("\\b(48\\d{8,10}|\\d{10,12})\\b")
 
     fun parseLinhas(linhas: List<String>): List<ParadaExtra> {
@@ -75,6 +76,7 @@ object EnviosExtraParser {
         var currentStop: ParadaExtra? = null
         var lastParadaNum = 0
         var lastJanela = ""
+        var enderecoPendente: String? = null
 
         fun salvarCurrent() {
             currentStop?.let { p ->
@@ -99,6 +101,26 @@ object EnviosExtraParser {
         for (rawLinha in linhas) {
             val linha = rawLinha.trim()
             if (linha.isBlank()) continue
+
+            // Em telas estreitas o Envios Extra/OCR pode quebrar o número do
+            // endereço em uma linha separada (ex.: "Avenida ..." + "2303").
+            // Guarda o logradouro até que o número apareça, evitando perder a parada.
+            if (enderecoPendente != null) {
+                val prefixo = enderecoPendente
+                val mNumeroEndereco = NUMERO_ENDERECO_SEPARADO_PATTERN.matcher(linha)
+                if (mNumeroEndereco.matches()) {
+                    salvarCurrent()
+                    currentStop = ParadaExtra(
+                        numero = lastParadaNum,
+                        endereco = "$prefixo ${mNumeroEndereco.group(1)}",
+                        janela = lastJanela
+                    )
+                    enderecoPendente = null
+                    lastParadaNum = 0
+                    continue
+                }
+                enderecoPendente = null
+            }
 
             // Ignora textos de cabeçalho e navegação do app Envios Extra
             if (linha.contains("Seu percurso tem", true) ||
@@ -141,14 +163,19 @@ object EnviosExtraParser {
 
             // Verifica linha de endereço (Rua / Av / etc.)
             val mEnd = ENDERECO_PATTERN.matcher(linha)
-            if (mEnd.find() || isLinhaDeEndereco(linha)) {
+            if (mEnd.find() || isLinhaDeEndereco(linha) || isPrefixoDeEndereco(linha)) {
                 salvarCurrent()
-                currentStop = ParadaExtra(
-                    numero = lastParadaNum,
-                    endereco = limpaEndereco(linha),
-                    janela = lastJanela
-                )
-                lastParadaNum = 0
+                val enderecoLimpo = limpaEndereco(linha)
+                if (temNumeroDeEndereco(enderecoLimpo)) {
+                    currentStop = ParadaExtra(
+                        numero = lastParadaNum,
+                        endereco = enderecoLimpo,
+                        janela = lastJanela
+                    )
+                    lastParadaNum = 0
+                } else {
+                    enderecoPendente = enderecoLimpo
+                }
                 continue
             }
 
@@ -234,11 +261,17 @@ object EnviosExtraParser {
     }
 
     private fun isLinhaDeEndereco(s: String): Boolean {
+        return isPrefixoDeEndereco(s) && temNumeroDeEndereco(s)
+    }
+
+    private fun isPrefixoDeEndereco(s: String): Boolean {
         val lower = s.lowercase()
-        val prefixes = listOf("rua ", "av. ", "av ", "avenida ", "r. ", "alameda ", "al. ", "travessa ", "tv. ", "praça ", "pça ", "rodovia ")
-        val hasPrefix = prefixes.any { lower.startsWith(it) }
-        val hasNumber = Pattern.compile("\\b\\d{1,5}\\b").matcher(s).find()
-        return hasPrefix && hasNumber
+        val prefixes = listOf("rua ", "av. ", "av ", "avenida ", "r. ", "alameda ", "al. ", "travessa ", "tv. ", "praça ", "pça ", "rodovia ", "estrada ")
+        return prefixes.any { lower.startsWith(it) }
+    }
+
+    private fun temNumeroDeEndereco(s: String): Boolean {
+        return Pattern.compile("\\b\\d{1,5}\\b").matcher(s).find()
     }
 
     private fun limpaEndereco(s: String): String {
