@@ -1225,7 +1225,7 @@
                 <!-- Zona 2: Meio -->
                 <div>
                     <div class="zone-header zone-meio">
-                        <span>🟡 ZONA 2: MEIO (PARADAS INTERMEDIÁRIAS)</span>
+                        <span>🟡 ZONA 2: BANCO DE TRÁS (PRÓXIMAS PARADAS)</span>
                         <span id="badge-count-meio" style="font-size: 12px;">0 paradas</span>
                     </div>
                     <div id="list-zona-meio" style="margin-top: 6px;"></div>
@@ -1924,7 +1924,7 @@
             paradas.forEach((p, idx) => {
                 p.parada_num = idx + 1;
                 if (idx < Math.ceil(total / 3)) p.zona = "Frente (Zona 1)";
-                else if (idx < Math.ceil((2 * total) / 3)) p.zona = "Meio (Zona 2)";
+                else if (idx < Math.ceil((2 * total) / 3)) p.zona = "Banco de trás (Zona 2)";
                 else p.zona = "Porta-Malas (Zona 3)";
             });
             return paradas;
@@ -1933,6 +1933,19 @@
         function obterNumeroOriginal(parada) {
             const n = parada && parada.parada_original;
             return n != null && Number.isInteger(Number(n)) && Number(n) > 0 ? Number(n) : null;
+        }
+
+        function obterEtiquetaParada(parada) {
+            const texto = String((parada && parada.etiqueta_base) || (parada && parada.pacotes && parada.pacotes[0] && parada.pacotes[0].etiqueta) || '').toUpperCase();
+            return (texto.match(/[A-Z][A-Z0-9]{1,30}_\d{1,3}(?!\d)/) || [])[0] || '';
+        }
+
+        function avisoEtiqueta(parada) {
+            const estado = parada && parada.etiqueta_status;
+            if (estado === 'conflitante') return 'Confira: etiqueta não corresponde ao número da parada';
+            if (estado === 'incompleta') return 'Confira: etiqueta incompleta ou leituras divergentes';
+            if (estado === 'ausente' || !obterEtiquetaParada(parada)) return 'Etiqueta não identificada: confira no Envios';
+            return '';
         }
 
         function atualizarResumoQuilometragem() {
@@ -2006,7 +2019,7 @@
                 if (idx < Math.ceil(total / 3)) {
                     p.zona = "Frente (Zona 1)";
                 } else if (idx < Math.ceil((2 * total) / 3)) {
-                    p.zona = "Meio (Zona 2)";
+                    p.zona = "Banco de trás (Zona 2)";
                 } else {
                     p.zona = "Porta-Malas (Zona 3)";
                 }
@@ -2252,51 +2265,36 @@
         // -------------------------------------------------------------
         function localizarPacoteERota(codigoBipado) {
             let limpo = codigoBipado.trim();
-            let urlMatch = limpo.match(/(\d{10,12})/);
-            let idExtraido = urlMatch ? urlMatch[1] : limpo;
-
-            let firstConferidoMatch = null;
+            const normalizado = limpo.toUpperCase().replace(/\s+/g, '');
+            const etiquetas = (normalizado.match(/[A-Z][A-Z0-9]{1,30}_\d{1,3}(?!\d)/g) || []);
+            let candidatos = [];
 
             for (let i = 0; i < rotaAtual.length; i++) {
                 let parada = rotaAtual[i];
                 if (!parada.pacotes) continue;
+                if (parada.etiqueta_status && parada.etiqueta_status !== 'lida') continue;
 
                 for (let j = 0; j < parada.pacotes.length; j++) {
                     let pkg = parada.pacotes[j];
-                    let idPkg = (pkg.id || '').toString();
-                    let finalPkg = (pkg.final || '').toString();
-                    let etiquetaPkg = (pkg.etiqueta || '').replace(/#/g, '').toLowerCase();
-                    let limpoLower = limpo.replace(/#/g, '').toLowerCase();
-
-                    let isMatch = (idPkg === limpo || idPkg === idExtraido ||
-                        (finalPkg && limpo.endsWith(finalPkg)) ||
-                        (finalPkg && idExtraido.endsWith(finalPkg)) ||
-                        (etiquetaPkg && (limpoLower.includes(etiquetaPkg) || etiquetaPkg.includes(limpoLower))) ||
-                        (idPkg && limpo.includes(idPkg)));
+                    const etiqueta = ((parada.etiqueta_base || pkg.etiqueta || '').toUpperCase().match(/[A-Z][A-Z0-9]{1,30}_\d{1,3}(?!\d)/) || [])[0];
+                    const numeroEtiqueta = etiqueta ? Number(etiqueta.split('_').pop()) : null;
+                    const numeroOriginal = obterNumeroOriginal(parada);
+                    const grupoConfere = etiqueta && (!numeroOriginal || numeroEtiqueta === numeroOriginal) && etiquetas.includes(etiqueta);
+                    const idReal = pkg.id_identificado !== false && /^\d{5,}$/.test(String(pkg.id || '')) ? String(pkg.id) : '';
+                    const isMatch = grupoConfere || (idReal && normalizado === idReal);
 
                     if (isMatch) {
-                        if (!pkg.conferido) {
-                            return {
-                                paradaIndex: i,
-                                parada: parada,
-                                pacoteIndex: j,
-                                pacote: pkg,
-                                isDuplicado: false
-                            };
-                        } else if (!firstConferidoMatch) {
-                            firstConferidoMatch = {
-                                paradaIndex: i,
-                                parada: parada,
-                                pacoteIndex: j,
-                                pacote: pkg,
-                                isDuplicado: true
-                            };
-                        }
+                        candidatos.push({ paradaIndex: i, parada, pacoteIndex: j, pacote: pkg });
                     }
                 }
             }
 
-            return firstConferidoMatch;
+            if (!candidatos.length) return null;
+            if (new Set(candidatos.map(c => c.paradaIndex)).size !== 1) return { ambiguo: true };
+            const duplicado = candidatos.find(c => c.pacote.codigo_lido && c.pacote.codigo_lido.toUpperCase().replace(/\s+/g, '') === normalizado);
+            if (duplicado) return { ...duplicado, isDuplicado: true };
+            const disponivel = candidatos.find(c => !c.pacote.conferido);
+            return disponivel ? { ...disponivel, isDuplicado: false } : { ...candidatos[0], isDuplicado: true };
         }
 
         window.confirmarBipe = function(code) {
@@ -2307,17 +2305,28 @@
 
             const match = localizarPacoteERota(code);
 
+            if (match && match.ambiguo) {
+                resultBox.className = 'bipe-result-card warning';
+                document.getElementById('bipe-res-stop').innerText = 'ETIQUETA AMBÍGUA';
+                document.getElementById('bipe-res-zone').innerText = 'CONFIRA';
+                document.getElementById('bipe-res-recipient').innerText = 'Esta etiqueta aparece em mais de uma parada.';
+                document.getElementById('bipe-res-address').innerText = `Código lido: ${code}`;
+                document.getElementById('bipe-res-packages-list').innerText = 'Confira a etiqueta e a parada no aplicativo de entregas.';
+                document.getElementById('bipe-res-alert').innerText = 'Nenhum pacote foi marcado como conferido.';
+                return;
+            }
+
             if (!match) {
                 resultBox.className = 'bipe-result-card danger';
                 document.getElementById('bipe-res-stop').innerText = "NÃO ENCONTRADO";
-                document.getElementById('bipe-res-zone').innerText = "FORA DA ROTA";
+                document.getElementById('bipe-res-zone').innerText = "CONFIRA";
                 document.getElementById('bipe-res-zone').className = "zone-pill zone-mala";
-                document.getElementById('bipe-res-recipient').innerText = "Pacote Não Pertence a Esta Rota!";
+                document.getElementById('bipe-res-recipient').innerText = "Não foi possível identificar a parada";
                 document.getElementById('bipe-res-address').innerText = `Código lido: ${code}`;
-                document.getElementById('bipe-res-packages-list').innerHTML = `<span style="color: #ff7b72;">Atenção: Verifique com o líder da gaiola ou confira se não é de outro motorista.</span>`;
-                document.getElementById('bipe-res-alert').innerText = "🚫 NÃO COLOQUE NO CARRO!";
+                document.getElementById('bipe-res-packages-list').innerText = 'Confira a etiqueta da saca e o número da parada. Um código individual sem essa etiqueta não pode ser associado automaticamente.';
+                document.getElementById('bipe-res-alert').innerText = 'Nenhum pacote foi marcado como conferido.';
 
-                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção! Pacote desconhecido não pertence a esta rota.");
+                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção. Não foi possível identificar a parada. Confira a etiqueta.");
                 if (window.Android && window.Android.vibrar) window.Android.vibrar("danger");
                 return;
             }
@@ -2327,12 +2336,12 @@
                 document.getElementById('bipe-res-stop').innerText = "ATENÇÃO!";
                 document.getElementById('bipe-res-zone').innerText = "DUPLICADO";
                 document.getElementById('bipe-res-zone').className = "zone-pill zone-meio";
-                document.getElementById('bipe-res-recipient').innerText = "Todos os pacotes desta etiqueta já foram bipados!";
+                document.getElementById('bipe-res-recipient').innerText = "Este código já foi lido ou a parada já está conferida.";
                 document.getElementById('bipe-res-address').innerText = `Parada #${match.paradaIndex + 1}: ${match.parada.endereco}`;
-                document.getElementById('bipe-res-packages-list').innerHTML = `Todos os ${match.parada.pacotes.length} pacotes já foram conferidos e guardados no carro.`;
-                document.getElementById('bipe-res-alert').innerText = "⚠️ Não conte este pacote duas vezes!";
+                document.getElementById('bipe-res-packages-list').innerText = 'A etiqueta da saca pode ser igual em vários pacotes. Para contar cada unidade, leia o código individual quando estiver disponível.';
+                document.getElementById('bipe-res-alert').innerText = "Não conte o mesmo código duas vezes.";
                 
-                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção: Todos os pacotes desta parada já foram conferidos!");
+                if (!isAudioMuted && window.Android && window.Android.speak) window.Android.speak("Atenção. Este código já foi lido ou a parada já está conferida.");
                 if (window.Android && window.Android.vibrar) window.Android.vibrar("warning");
                 return;
             }
@@ -2340,6 +2349,7 @@
             const { paradaIndex, parada, pacoteIndex, pacote } = match;
             pacotesBipados.add(pacote.id);
             pacote.conferido = true;
+            pacote.codigo_lido = code;
 
             let totalParadas = rotaAtual.length;
             let zonaNome = "Frente (Zona 1)";
@@ -2348,7 +2358,7 @@
                 zonaNome = "Frente (Zona 1)";
                 zonaClass = "zone-frente";
             } else if (paradaIndex < Math.ceil((2 * totalParadas) / 3)) {
-                zonaNome = "Meio (Zona 2)";
+                zonaNome = "Banco de trás (Zona 2)";
                 zonaClass = "zone-meio";
             } else {
                 zonaNome = "Porta-Malas (Zona 3)";
@@ -2372,8 +2382,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px;">
                         <span>
                             <b>Pacote ${idx + 1} de ${totalDestaParada}:</b> 
-                            <span class="package-tag-highlight">${p.final || p.id}</span>
-                            ${p.etiqueta ? '<span style="font-size: 11px; color: var(--text-muted); margin-left: 4px;">' + p.etiqueta + '</span>' : ''}
+                            <span class="package-tag-highlight">${p.id_identificado === false ? (obterEtiquetaParada(parada) || 'Etiqueta não identificada') : (p.final || p.id)}</span>
                         </span>
                         <span style="font-weight: bold; color: ${p.conferido ? 'var(--success-glow)' : 'var(--text-muted)'};">
                             ${p.conferido ? '✅ Conferido' : '⏳ Pendente'}
@@ -2383,7 +2392,7 @@
             });
             document.getElementById('bipe-res-packages-list').innerHTML = pkgsHtml;
 
-            let speakText = `Parada ${paradaIndex + 1}. ${parada.destinatario ? parada.destinatario.split(' ')[0] : ''}. Guardar na ${zonaNome.split(' ')[0]}.`;
+            let speakText = `Ordem ${paradaIndex + 1}. ${obterNumeroOriginal(parada) ? 'Mercado Livre parada ' + obterNumeroOriginal(parada) + '. ' : ''}Guardar em ${zonaNome}.`;
             if (totalDestaParada > 1) {
                 if (conferidosDestaParada === totalDestaParada) {
                     speakText += ` Todos os ${totalDestaParada} pacotes desta parada foram conferidos!`;
@@ -2601,12 +2610,11 @@
                 let pkgsHtml = '';
                 
                 if (p.pacotes) {
-                    p.pacotes.forEach((pkg) => {
+                    p.pacotes.forEach((pkg, indicePacote) => {
                         pkgsHtml += `
                             <div class="pkg-item">
                                 <div>
-                                    <span class="pkg-code">📦 ${pkg.final ? 'Final: ' + pkg.final : pkg.id}</span>
-                                    ${pkg.etiqueta ? '<span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">' + pkg.etiqueta + '</span>' : ''}
+                                    <span class="pkg-code">📦 ${pkg.id_identificado === false ? 'Unidade ' + (indicePacote + 1) + ' de ' + p.pacotes.length : (pkg.final ? 'Final: ' + pkg.final : pkg.id)}</span>
                                 </div>
                                 <span class="pkg-badge ${pkg.conferido || isEntregue ? 'checked' : 'pending'}">
                                     ${pkg.conferido || isEntregue ? 'CONFERIDO' : 'PENDENTE'}
@@ -2616,8 +2624,8 @@
                     });
                 }
 
-                let zonaClass = i < rotaAtual.length/3 ? 'zone-frente' : (i < 2*rotaAtual.length/3 ? 'zone-meio' : 'zone-mala');
-                let zonaLabel = i < rotaAtual.length/3 ? 'Frente' : (i < 2*rotaAtual.length/3 ? 'Meio' : 'Porta-malas');
+                let zonaClass = i < Math.ceil(rotaAtual.length/3) ? 'zone-frente' : (i < Math.ceil(2*rotaAtual.length/3) ? 'zone-meio' : 'zone-mala');
+                let zonaLabel = i < Math.ceil(rotaAtual.length/3) ? 'Frente' : (i < Math.ceil(2*rotaAtual.length/3) ? 'Banco de trás' : 'Porta-malas');
 
                 html += `
                     <div class="stop-card ${isEntregue ? 'stop-delivered' : (todosConferidos ? 'completed' : '')}" id="stop-card-${i}">
@@ -2641,6 +2649,9 @@
                         </div>
 
                         <div class="packages-container">
+                            <div style="font-weight:800; color:var(--ml-yellow); margin-bottom:5px;">Etiqueta da parada: ${obterEtiquetaParada(p) || 'não identificada'}</div>
+                            ${avisoEtiqueta(p) ? `<div style="color:#fbbf24; font-size:12px; margin-bottom:6px;">⚠ ${avisoEtiqueta(p)}</div>` : ''}
+                            ${Object.prototype.hasOwnProperty.call(p, 'quantidade_unidades') && p.quantidade_unidades == null ? '<div style="color:#fbbf24; font-size:12px; margin-bottom:6px;">⚠ Quantidade de unidades não identificada: confira no Envios.</div>' : ''}
                             <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">
                                 Pacotes desta parada (${p.pacotes ? p.pacotes.length : 0}):
                             </div>
@@ -2700,7 +2711,7 @@
 
             rotaAtual.forEach((p, i) => {
                 let isEntregue = !!p.finalizada;
-                let pkgsBrief = (p.pacotes || []).map(pkg => `<span class="package-tag-highlight" style="font-size: 11px;">${pkg.final || pkg.id}</span>`).join(' ');
+                let pkgsBrief = `<span class="package-tag-highlight" style="font-size:11px;">${obterEtiquetaParada(p) || 'Etiqueta não identificada'}</span>${avisoEtiqueta(p) ? `<span style="color:#fbbf24; font-size:11px;"> ⚠ ${avisoEtiqueta(p)}</span>` : ''}`;
                 let cardHtml = `
                     <div class="card" style="margin-bottom: 6px; padding: 10px 12px; ${isEntregue ? 'border-left: 4px solid var(--emerald); background: rgba(16, 185, 129, 0.05);' : ''}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2811,7 +2822,6 @@
             }
 
             rotaAtual.forEach((p, i) => {
-                if (!mostrarRotaCompleta && i !== proximaPendente) return;
                 if (p.lat && p.lng) {
                     let pos = [p.lat, p.lng];
                     latlngs.push(pos);
@@ -2852,7 +2862,7 @@
                 }
             });
 
-            if (rotaCasa && rotaCasa.lat && rotaCasa.lng && (mostrarRotaCompleta || proximaPendente === -1)) {
+            if (rotaCasa && rotaCasa.lat && rotaCasa.lng) {
                 const casaPos = [rotaCasa.lat, rotaCasa.lng];
                 latlngs.push(casaPos);
                 markers.push(L.marker(casaPos, { icon: criarIconeExtremo('🏠', '#16a34a'), zIndexOffset: 900 })

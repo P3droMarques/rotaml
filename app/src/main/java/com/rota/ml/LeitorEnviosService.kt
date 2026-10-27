@@ -44,7 +44,7 @@ class LeitorEnviosService : AccessibilityService() {
 
         fun limpar() {
             textosCapturados.clear()
-            paradasDetectadas.clear()
+            synchronized(paradasDetectadas) { paradasDetectadas.clear() }
             onUpdateListener?.invoke(0, 0)
         }
     }
@@ -57,6 +57,7 @@ class LeitorEnviosService : AccessibilityService() {
     private var ultimoTamanhoParadas = 0
     private var ocrEmAndamento = false
     private var capturaNativaIndisponivel = false
+    private val reconhecedorTexto = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val capturaOcrRunnable = object : Runnable {
         override fun run() {
             if (!capturando) return
@@ -92,59 +93,24 @@ class LeitorEnviosService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!capturando || event == null) return
 
-        // 1. Extrai texto dos registros do evento
-        try {
-            event.text.forEach { charSeq ->
-                adicionarTextoCapturado(charSeq?.toString())
-            }
-        } catch (_: Exception) {}
-
-        // 2. Extrai nós da fonte do evento e da janela ativa
-        val nodesToScan = mutableListOf<AccessibilityNodeInfo>()
-        try {
-            event.source?.let { nodesToScan.add(it) }
-        } catch (_: Exception) {}
-
-        try {
-            rootInActiveWindow?.let { nodesToScan.add(it) }
-        } catch (_: Exception) {}
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                windows?.forEach { w ->
-                    w.root?.let { nodesToScan.add(it) }
-                }
-            } catch (_: Exception) {}
-        }
-
-        var novosItens = false
-        val tamanhoAntes = textosCapturados.size
-
-        for (node in nodesToScan) {
-            try {
-                extrairTextosRecursivo(node)
-            } catch (_: Exception) {}
-        }
-
-        if (textosCapturados.size > tamanhoAntes) {
-            novosItens = true
-        }
-
-        // Se encontrou novos textos, roda o analisador inteligente de paradas
-        if (novosItens) {
-            processarParadasEmTempoReal()
-        }
+        // Cada tela precisa manter sua ordem e suas linhas repetidas. Misturar
+        // linhas únicas de várias rolagens associa etiquetas à parada errada.
+        val linhas = mutableListOf<String>()
+        val root = try { rootInActiveWindow ?: event.source } catch (_: Exception) { null }
+        if (root != null) extrairTextosRecursivo(root, linhas)
+        else event.text.forEach { adicionarTextoCapturado(it?.toString(), linhas) }
+        registrarLeitura(linhas)
     }
 
-    private fun extrairTextosRecursivo(node: AccessibilityNodeInfo?) {
+    private fun extrairTextosRecursivo(node: AccessibilityNodeInfo?, linhas: MutableList<String>) {
         if (node == null) return
 
         try {
-            adicionarTextoCapturado(node.text?.toString())
-            adicionarTextoCapturado(node.contentDescription?.toString())
+            adicionarTextoCapturado(node.text?.toString(), linhas)
+            if (node.text.isNullOrBlank()) adicionarTextoCapturado(node.contentDescription?.toString(), linhas)
 
             for (i in 0 until node.childCount) {
-                extrairTextosRecursivo(node.getChild(i))
+                extrairTextosRecursivo(node.getChild(i), linhas)
             }
         } catch (_: Exception) {}
     }
@@ -154,24 +120,24 @@ class LeitorEnviosService : AccessibilityService() {
      * única string, com quebras de linha. O parser trabalha por linhas, então
      * normalizamos aqui antes de acumular o texto de várias rolagens.
      */
-    private fun adicionarTextoCapturado(texto: String?) {
+    private fun adicionarTextoCapturado(texto: String?, linhas: MutableList<String>) {
         texto?.split(Regex("\\r?\\n"))?.forEach { parte ->
             val linha = parte.trim()
-            if (linha.length >= 2) textosCapturados.add(linha)
+            if (linha.isNotBlank()) linhas.add(linha)
         }
     }
 
-    private fun processarParadasEmTempoReal() {
-        val lista = textosCapturados.toList()
-        val paradas = EnviosExtraParser.parseLinhas(lista)
+    private fun registrarLeitura(linhas: List<String>) {
+        if (linhas.isEmpty()) return
+        textosCapturados.addAll(linhas)
+        val paradas = EnviosExtraParser.parseLinhas(linhas)
 
         synchronized(paradasDetectadas) {
-            paradasDetectadas.clear()
-            paradasDetectadas.addAll(paradas)
+            EnviosExtraParser.mesclarLeituras(paradasDetectadas, paradas)
         }
 
-        val totalParadas = paradas.size
-        val totalLinhas = lista.size
+        val totalParadas = synchronized(paradasDetectadas) { paradasDetectadas.size }
+        val totalLinhas = textosCapturados.size
 
         // Se detectou novas paradas, dá feedback tátil
         if (totalParadas > ultimoTamanhoParadas) {
@@ -415,23 +381,20 @@ class LeitorEnviosService : AccessibilityService() {
     private fun processarBitmapComMlKit(bitmap: Bitmap) {
         try {
             val image = InputImage.fromBitmap(bitmap, 0)
-            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-            recognizer.process(image)
+            reconhecedorTexto.process(image)
                 .addOnSuccessListener { visionText ->
-                    for (block in visionText.textBlocks) {
-                        for (line in block.lines) {
-                            adicionarTextoCapturado(line.text)
-                        }
-                    }
+                    val linhas = linhasOcrEmOrdem(visionText)
                     ocrEmAndamento = false
-                    processarParadasEmTempoReal()
+                    registrarLeitura(linhas)
                 }
                 .addOnFailureListener { e ->
                     ocrEmAndamento = false
                     txtOverlayStatus?.text = "⚡ Erro no OCR: ${e.message}"
                 }
+                .addOnCompleteListener { bitmap.recycle() }
         } catch (e: Exception) {
             ocrEmAndamento = false
+            bitmap.recycle()
             Log.e("LeitorEnviosService", "Erro processando OCR", e)
         }
     }
@@ -484,6 +447,7 @@ class LeitorEnviosService : AccessibilityService() {
         mainHandler.removeCallbacks(capturaOcrRunnable)
         instance = null
         onScreenshotCapabilityError = null
+        reconhecedorTexto.close()
         removerOverlay()
         super.onDestroy()
     }

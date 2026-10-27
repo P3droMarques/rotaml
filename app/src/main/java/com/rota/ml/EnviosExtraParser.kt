@@ -11,16 +11,17 @@ data class ParadaExtra(
     var bairro: String = "",
     var cidade: String = "Campinas",
     var cep: String = "",
-    var unidades: Int = 1,
+    var unidades: Int = 0,
     var etiqueta: String = "",
+    var etiquetaIncompleta: Boolean = false,
     var janela: String = "",
     var destinatario: String = ""
 ) {
     fun toJson(): JSONObject {
         val obj = JSONObject()
-        obj.put("parada_num", if (numero > 0) numero else 1)
+        obj.put("parada_num", if (numero > 0) numero else JSONObject.NULL)
         obj.put("parada_original", if (numero > 0) numero else JSONObject.NULL)
-        obj.put("destinatario", if (destinatario.isNotBlank()) destinatario else (complemento.ifBlank { "Parada ${if (numero > 0) numero else 1}" }))
+        obj.put("destinatario", if (destinatario.isNotBlank()) destinatario else (complemento.ifBlank { if (numero > 0) "Parada $numero" else "Parada sem número identificado" }))
         obj.put("endereco", endereco)
         obj.put("complemento", complemento)
         obj.put("bairro", bairro)
@@ -29,15 +30,26 @@ data class ParadaExtra(
         obj.put("janela", janela)
 
         val pacotesArray = JSONArray()
-        val qtd = if (unidades > 0) unidades else 1
-        val cleanTag = etiqueta.replace("#", "").trim().ifBlank { "NX_${if (numero > 0) numero else 1}" }
+        val qtd = if (unidades > 0) unidades else 0
+        obj.put("quantidade_unidades", if (unidades > 0) unidades else JSONObject.NULL)
+        val cleanTag = etiqueta.replace("#", "").trim().uppercase()
+        val numeroEtiqueta = Regex("^[A-Z][A-Z0-9]*_(\\d+)$").matchEntire(cleanTag)?.groupValues?.get(1)?.toIntOrNull()
+        val estadoEtiqueta = when {
+            cleanTag.isBlank() -> if (etiquetaIncompleta) "incompleta" else "ausente"
+            etiquetaIncompleta -> "incompleta"
+            numeroEtiqueta == null -> "incompleta"
+            numero > 0 && numeroEtiqueta != numero -> "conflitante"
+            else -> "lida"
+        }
+        obj.put("etiqueta_base", cleanTag)
+        obj.put("etiqueta_status", estadoEtiqueta)
 
         for (i in 1..qtd) {
             val pkg = JSONObject()
-            val id = if (qtd == 1) cleanTag else "${cleanTag}_$i"
-            pkg.put("id", id)
-            pkg.put("final", if (cleanTag.length >= 5) cleanTag.takeLast(5) else cleanTag)
-            pkg.put("etiqueta", if (qtd == 1) "#$cleanTag" else "#$cleanTag ($i/$qtd)")
+            pkg.put("id", "slot_${endereco.lowercase().trim().hashCode()}_${numero}_${i}")
+            pkg.put("id_identificado", false)
+            pkg.put("final", "")
+            pkg.put("etiqueta", cleanTag)
             pkg.put("conferido", false)
             pacotesArray.put(pkg)
         }
@@ -48,6 +60,34 @@ data class ParadaExtra(
 
 object EnviosExtraParser {
 
+    fun mesclarLeituras(destino: MutableList<ParadaExtra>, novas: List<ParadaExtra>) {
+        for (nova in novas) {
+            val endereco = nova.endereco.trim().lowercase()
+            val existente = destino.firstOrNull { antiga ->
+                antiga.endereco.trim().lowercase() == endereco &&
+                    (antiga.numero <= 0 || nova.numero <= 0 || antiga.numero == nova.numero)
+            }
+            if (existente == null) {
+                destino.add(nova.copy())
+                continue
+            }
+            if (existente.numero <= 0 && nova.numero > 0) existente.numero = nova.numero
+            if (existente.cep.isBlank()) existente.cep = nova.cep
+            if (existente.bairro.isBlank()) existente.bairro = nova.bairro
+            if (existente.complemento.isBlank()) existente.complemento = nova.complemento
+            if (existente.janela.isBlank()) existente.janela = nova.janela
+            if (existente.destinatario.isBlank()) existente.destinatario = nova.destinatario
+            if (nova.unidades > existente.unidades) existente.unidades = nova.unidades
+            if (existente.etiqueta.isBlank() || (existente.etiquetaIncompleta && !nova.etiquetaIncompleta && nova.etiqueta.isNotBlank())) {
+                existente.etiqueta = nova.etiqueta
+                existente.etiquetaIncompleta = nova.etiquetaIncompleta
+            } else if (nova.etiqueta.isNotBlank() && !nova.etiquetaIncompleta && existente.etiqueta != nova.etiqueta) {
+                // Leituras diferentes precisam de conferência, não de uma escolha arbitrária.
+                existente.etiquetaIncompleta = true
+            }
+        }
+    }
+
     private val ENDERECO_PATTERN = Pattern.compile(
         "^(Rua|Avenida|Av\\.?|R\\.?|Alameda|Al\\.?|Travessa|Tv\\.?|Praça|Pça\\.?|Rodovia|Rod\\.?|Estrada)\\s+[A-Za-zÀ-ÖØ-öø-ÿ0-9\\s\\.\\,\\'\\-]+?\\b(\\d+)\\b",
         Pattern.CASE_INSENSITIVE
@@ -56,21 +96,12 @@ object EnviosExtraParser {
     private val CEP_PATTERN = Pattern.compile("CEP\\s*:?\\s*(\\d{5}-?\\d{3}|\\d{8})", Pattern.CASE_INSENSITIVE)
     private val CEP_RAW_PATTERN = Pattern.compile("\\b(\\d{5}-?\\d{3}|\\d{8})\\b")
 
-    private val ENTREGA_ETIQUETA_PATTERN = Pattern.compile(
-        "Entrega\\s+(\\d+)\\s+unidades?.*?ETIQUETA\\s*#*([A-Za-z0-9_\\-\\.]+)",
-        Pattern.CASE_INSENSITIVE
-    )
-
-    private val ETIQUETA_PATTERN = Pattern.compile(
-        "ETIQUETA\\s*#*([A-Za-z0-9_\\-\\.]+)|#+([A-Z]{2}\\d{2,4}_\\d+)",
-        Pattern.CASE_INSENSITIVE
-    )
+    private val ETIQUETA_PATTERN = Pattern.compile("#*\\s*([A-Z][A-Z0-9]{1,30})\\s*_\\s*(\\d{1,3})(?!\\d)", Pattern.CASE_INSENSITIVE)
 
     private val UNIDADES_PATTERN = Pattern.compile("Entrega\\s+(\\d+)\\s+unidades?", Pattern.CASE_INSENSITIVE)
     private val JANELA_PATTERN = Pattern.compile("(\\d{1,2}:\\d{2}\\s*h?\\s*a\\s*\\d{1,2}:\\d{2}\\s*h?)", Pattern.CASE_INSENSITIVE)
     private val NUMERO_PARADA_PATTERN = Pattern.compile("^([1-9]\\d{0,2})$")
     private val NUMERO_ENDERECO_SEPARADO_PATTERN = Pattern.compile("^(\\d{2,5})(?:\\s*[✓✔✿✾❀].*)?$")
-    private val ID_NUMERICO_PATTERN = Pattern.compile("\\b(48\\d{8,10}|\\d{10,12})\\b")
 
     fun parseLinhas(linhas: List<String>): List<ParadaExtra> {
         val paradasMap = LinkedHashMap<String, ParadaExtra>()
@@ -78,11 +109,12 @@ object EnviosExtraParser {
         var lastParadaNum = 0
         var lastJanela = ""
         var enderecoPendente: String? = null
+        var aguardandoEtiqueta = false
 
         fun salvarCurrent() {
             currentStop?.let { p ->
                 if (p.endereco.isNotBlank()) {
-                    val key = p.endereco.lowercase().trim().replace(Regex("[^a-z0-9]"), "")
+                    val key = p.endereco.lowercase().trim() + "|" + p.numero
                     val existing = paradasMap[key]
                     if (existing == null) {
                         paradasMap[key] = p
@@ -97,6 +129,7 @@ object EnviosExtraParser {
                 }
             }
             currentStop = null
+            aguardandoEtiqueta = false
         }
 
         for (rawLinha in linhas) {
@@ -145,9 +178,6 @@ object EnviosExtraParser {
                 val num = mNum.group(1)?.toIntOrNull() ?: 0
                 if (num in 1..200) {
                     lastParadaNum = num
-                    currentStop?.let {
-                        if (it.numero <= 0) it.numero = num
-                    }
                     continue
                 }
             }
@@ -183,25 +213,6 @@ object EnviosExtraParser {
             // Se ainda não temos uma parada atual, pula linhas desconexas
             val parada = currentStop ?: continue
 
-            // Verifica "Entrega X unidades | ETIQUETA ##NX..."
-            val mEntregaEtq = ENTREGA_ETIQUETA_PATTERN.matcher(linha)
-            if (mEntregaEtq.find()) {
-                val un = mEntregaEtq.group(1)?.toIntOrNull() ?: 1
-                val etq = limpaEtiqueta(mEntregaEtq.group(2) ?: "")
-                parada.unidades = un
-                parada.etiqueta = etq
-                continue
-            }
-
-            // Verifica ETIQUETA isolada
-            val mEtq = ETIQUETA_PATTERN.matcher(linha)
-            if (mEtq.find()) {
-                val tag = mEtq.group(1) ?: mEtq.group(2) ?: ""
-                if (tag.isNotBlank()) {
-                    parada.etiqueta = limpaEtiqueta(tag)
-                }
-            }
-
             // Verifica Unidades isoladas
             val mUn = UNIDADES_PATTERN.matcher(linha)
             if (mUn.find()) {
@@ -209,14 +220,28 @@ object EnviosExtraParser {
                 parada.unidades = un
             }
 
-            // Verifica ID numérico de pacote (ex: 48314806075)
-            val mId = ID_NUMERICO_PATTERN.matcher(linha)
-            if (mId.find()) {
-                val id = mId.group(1) ?: ""
-                if (parada.etiqueta.isBlank()) {
-                    parada.etiqueta = id
-                }
+            val contemEtiqueta = linha.contains("ETIQUETA", true)
+            val mEtq = ETIQUETA_PATTERN.matcher(linha)
+            if ((contemEtiqueta || aguardandoEtiqueta || linha.trimStart().startsWith("#")) && mEtq.find()) {
+                val prefixo = mEtq.group(1).orEmpty().uppercase()
+                val sufixo = mEtq.group(2).orEmpty()
+                parada.etiqueta = "${prefixo}_${sufixo}"
+                // Uma reticência após um sufixo que não corresponde ao número
+                // visível pode esconder outros dígitos. Nunca completamos por suposição.
+                val restante = linha.substring(mEtq.end()).trimStart()
+                parada.etiquetaIncompleta = restante.startsWith("...") && (parada.numero <= 0 || sufixo.toIntOrNull() != parada.numero)
+                if (parada.numero <= 0 && !restante.startsWith("...")) parada.numero = sufixo.toIntOrNull() ?: 0
+                aguardandoEtiqueta = false
+                continue
             }
+            if (contemEtiqueta) {
+                aguardandoEtiqueta = true
+                parada.etiquetaIncompleta = true
+                continue
+            }
+
+            // Verifica ID numérico de pacote (ex: 48314806075)
+            // Códigos numéricos lidos em outros campos não são a etiqueta da saca.
 
             // Verifica CEP e detalhes (Ex: "Loja Academia Aquarius, CEP 13076011" ou "Taquaral, CEP 13076150")
             val mCep = CEP_PATTERN.matcher(linha)
@@ -254,10 +279,6 @@ object EnviosExtraParser {
         salvarCurrent()
 
         val resultado = paradasMap.values.toList()
-        // Atribui números sequenciais se algum ficou zerado
-        resultado.forEachIndexed { index, p ->
-            if (p.numero <= 0) p.numero = index + 1
-        }
         return resultado
     }
 

@@ -502,10 +502,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         Toast.makeText(this, "Lendo ${uris.size} foto(s) com IA (OCR)...", Toast.LENGTH_SHORT).show()
 
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-        val todasLinhas = Collections.synchronizedList(mutableListOf<String>())
+        val leituras = MutableList<List<String>>(uris.size) { emptyList() }
         var processadas = 0
 
-        for (uri in uris) {
+        for ((indice, uri) in uris.withIndex()) {
             try {
                 val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ImageDecoder.decodeBitmap(ImageDecoder.createSource(contentResolver, uri)) { decoder, _, _ ->
@@ -519,40 +519,35 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val image = InputImage.fromBitmap(bitmap, 0)
                 recognizer.process(image)
                     .addOnSuccessListener { visionText ->
-                        for (block in visionText.textBlocks) {
-                            for (line in block.lines) {
-                                val s = line.text.trim()
-                                if (s.length >= 2) {
-                                    todasLinhas.add(s)
-                                    LeitorEnviosService.textosCapturados.add(s)
-                                }
-                            }
-                        }
+                        leituras[indice] = linhasOcrEmOrdem(visionText)
+                        LeitorEnviosService.textosCapturados.addAll(leituras[indice])
                         processadas++
                         if (processadas == uris.size) {
-                            finalizarProcessamentoOcr(todasLinhas)
+                            finalizarProcessamentoOcr(leituras)
                         }
                     }
                     .addOnFailureListener {
                         processadas++
                         if (processadas == uris.size) {
-                            finalizarProcessamentoOcr(todasLinhas)
+                            finalizarProcessamentoOcr(leituras)
                         }
                     }
+                    .addOnCompleteListener { bitmap.recycle() }
             } catch (e: Exception) {
                 Log.e("OCR", "Erro carregando imagem $uri", e)
                 processadas++
                 if (processadas == uris.size) {
-                    finalizarProcessamentoOcr(todasLinhas)
+                    finalizarProcessamentoOcr(leituras)
                 }
             }
         }
     }
 
-    private fun finalizarProcessamentoOcr(linhas: List<String>) {
+    private fun finalizarProcessamentoOcr(leituras: List<List<String>>) {
         scope.launch {
             binding.progressBar.visibility = View.GONE
-            val paradas = EnviosExtraParser.parseLinhas(linhas)
+            val paradas = mutableListOf<ParadaExtra>()
+            leituras.forEach { EnviosExtraParser.mesclarLeituras(paradas, EnviosExtraParser.parseLinhas(it)) }
             if (paradas.isEmpty()) {
                 Toast.makeText(this@MainActivity, "Nenhum endereço identificado na imagem. Verifique se o print está legível.", Toast.LENGTH_LONG).show()
                 return@launch
@@ -581,10 +576,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .addOnSuccessListener { barcode ->
                 val code = barcode.rawValue ?: ""
                 binding.webView.post {
-                    binding.webView.evaluateJavascript("confirmarBipe('$code')", null)
+                    binding.webView.evaluateJavascript("confirmarBipe(${JSONObject.quote(code)})", null)
                 }
-                syncFirebaseBipe(code)
-                syncSupabase(code)
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Erro ao ler código: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -1091,12 +1084,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val paradasProntas = synchronized(LeitorEnviosService.paradasDetectadas) {
                 LeitorEnviosService.paradasDetectadas.toList()
             }
-            val rawTextList = LeitorEnviosService.textosCapturados.toList()
-
-            if (paradasProntas.isEmpty() && rawTextList.isEmpty()) {
+            if (paradasProntas.isEmpty()) {
                 MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle("📍 Nenhuma Parada Detectada")
-                    .setMessage("Para processar e otimizar a rota:\n\n1. Toque em '1. Ler Tela' para ler diretamente do aplicativo Mercado Envios Extra.\n2. Ou toque no ícone 🖼️ (OCR) para escolher fotos/prints da galeria.")
+                    .setMessage("Não foi possível identificar paradas completas. Leia novamente a tela do Envios Extra ou selecione fotos nítidas da rota.")
                     .setPositiveButton("📷 Ler Fotos (OCR)") { _, _ ->
                         abrirSeletorGaleria()
                     }
@@ -1119,32 +1110,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             binding.progressBar.visibility = View.VISIBLE
             Toast.makeText(this@MainActivity, "Obtendo GPS atual e calculando a melhor rota pelas ruas...", Toast.LENGTH_SHORT).show()
 
-            var paradasJsonArray = JSONArray()
+            val paradasJsonArray = JSONArray()
 
             // 1. Extração em tempo real já estruturada pelo LeitorEnviosService
-            if (paradasProntas.isNotEmpty()) {
-                for (p in paradasProntas) {
-                    paradasJsonArray.put(p.toJson())
-                }
-            } else if (rawTextList.isNotEmpty()) {
-                // 2. Parser local inteligente
-                val parsed = EnviosExtraParser.parseLinhas(rawTextList)
-                for (p in parsed) {
-                    paradasJsonArray.put(p.toJson())
-                }
-            }
-
-            // 3. Fallback Gemini se configurado
-            if (paradasJsonArray.length() == 0 && rawTextList.isNotEmpty()) {
-                val geminiResult = callGeminiWithFailover(rawTextList.joinToString("\n"))
-                if (geminiResult != null) {
-                    try {
-                        paradasJsonArray = JSONArray(geminiResult)
-                    } catch (e: Exception) {
-                        Log.e("GeminiParse", "Erro ao parsear JSON do Gemini", e)
-                    }
-                }
-            }
+            for (p in paradasProntas) paradasJsonArray.put(p.toJson())
 
             if (paradasJsonArray.length() == 0) {
                 binding.progressBar.visibility = View.GONE
